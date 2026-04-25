@@ -12,7 +12,7 @@ resource "aws_iam_account_password_policy" "this" {
 
 resource "aws_iam_policy" "env_scoped_boundary" {
   name        = "${local.name_prefix}-env-scoped-boundary"
-  description = "Permissions boundary for ${var.env} workload roles. Forbids access to resources tagged with a different env."
+  description = "Permissions boundary for ${var.env} workload roles. Forbids access to resources tagged with a different env and blocks IAM modification."
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -24,16 +24,13 @@ resource "aws_iam_policy" "env_scoped_boundary" {
         Resource = "*"
       },
       {
-        Sid    = "DenyCrossEnvResourceAccess"
-        Effect = "Deny"
-        Action = "*"
+        Sid      = "DenyCrossEnvResourceAccess"
+        Effect   = "Deny"
+        Action   = "*"
         Resource = "*"
         Condition = {
           StringNotEquals = {
             "aws:ResourceTag/env" = var.env
-          }
-          StringEquals = {
-            "aws:RequestedRegion" = var.region
           }
           "Null" = {
             "aws:ResourceTag/env" = "false"
@@ -48,6 +45,17 @@ resource "aws_iam_policy" "env_scoped_boundary" {
           "iam:DeleteUser",
           "iam:PutUserPolicy",
           "iam:AttachUserPolicy",
+          "iam:DetachUserPolicy",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:PutRolePolicy",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:PassRole",
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:CreateAccessKey",
+          "iam:DeleteAccessKey",
         ]
         Resource = "*"
       },

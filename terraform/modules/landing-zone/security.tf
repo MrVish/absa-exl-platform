@@ -1,3 +1,6 @@
+# TODO(Phase 1 sprint 2): set kms_key_id = module.kms_hierarchy.flow_logs_key_arn
+# once the kms-hierarchy module is built. tfsec aws-cloudwatch-log-group-customer-key
+# (HIGH) and checkov CKV_AWS_158 are expected failures until then.
 resource "aws_cloudwatch_log_group" "flow_logs" {
   name              = "/aws/vpc/flow-logs/${local.name_prefix}"
   retention_in_days = var.flow_logs_retention_days

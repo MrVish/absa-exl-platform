@@ -28,19 +28,31 @@ module "landing_zone" {
 
 ## CIDR allocation convention
 
-| Env | CIDR | Subnet pattern |
+| Env | CIDR | Subnet pattern (cidrsubnet 4-bit newbits) |
 | --- | --- | --- |
-| dev | `10.40.0.0/20` | public 0-2, private 3-5, data 6-8 |
-| stg | `10.40.16.0/20` | same |
-| prod | `10.40.32.0/20` | same |
+| dev | `10.40.0.0/20` | public 0-2, private 4-6, data 8-10 |
+| stg | `10.40.16.0/20` | public 0-2, private 4-6, data 8-10 |
+| prod | `10.40.32.0/20` | public 0-2, private 4-6, data 8-10 |
 
 ## NAT gateway pattern
 
 Prod uses one NAT gateway per AZ for high availability (3 NATs in 3 AZs). Dev and stg share a single NAT gateway in the first AZ for cost. Verified by the `non_prod_uses_single_nat_gateway` and `prod_uses_one_nat_gateway_per_az` tests.
 
+## Data subnet isolation
+
+The data tier route table is intentionally empty — data-tier resources have no egress route, not even via NAT. This forces stateful workloads (RDS, ElastiCache, S3 access) to use VPC endpoints. If you add a data-tier consumer that needs to reach AWS service APIs, provision the corresponding gateway endpoint (S3, DynamoDB) or interface endpoint (Secrets Manager, KMS, etc.) in the env stack — not in this module.
+
 ## Permissions boundary
 
 The module creates an env-scoped permissions boundary policy at `arn:aws:iam::<account>:policy/<env>-env-scoped-boundary`. Attach this to every workload role you create in the env. The boundary denies any action on a resource tagged `env=<other>` and denies IAM-user mutation entirely. See [ADR-0004 §Compensating controls](../../../docs/adr/0004-account-topology-1-absa-3-exl.md) for context.
+
+## Known gap — account-singleton resources
+
+This module currently provisions three resources that are AWS-account singletons: `aws_iam_account_password_policy`, `aws_securityhub_account`, and `aws_guardduty_detector`. Calling this module more than once in the same AWS account will produce conflicting Terraform state on these singletons.
+
+For Phase 1, this module is called exactly once per EXL account (one of `exl-dev` / `exl-stg` / `exl-prod`), so the conflict cannot occur in practice. However, the architectural correctness fix is to move these resources into `terraform/account-bootstrap/exl-{env}/` alongside CloudTrail, where account-singleton ownership is explicit. This refactor is scheduled for Phase 1 sprint 2 alongside the `kms-hierarchy` and `iam-federation` modules.
+
+Until then: do NOT instantiate this module twice in the same AWS account.
 
 ## Inputs
 
