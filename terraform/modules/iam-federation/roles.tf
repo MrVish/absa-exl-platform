@@ -83,8 +83,8 @@ resource "aws_iam_role_policy" "platform_operator" {
         Resource = "*"
       },
       {
-        Sid      = "AllowOperationalWrite"
-        Effect   = "Allow"
+        Sid    = "AllowOperationalWrite"
+        Effect = "Allow"
         Action = [
           "ec2:RebootInstances",
           "ec2:StartInstances",

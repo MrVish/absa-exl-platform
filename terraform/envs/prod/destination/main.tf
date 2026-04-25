@@ -48,9 +48,9 @@ module "landing_zone" {
 module "replication_destination" {
   source = "../../../modules/s3-replication-destination"
 
-  bucket_name                 = "exl-model-landing-prod"
-  env                         = "prod"
-  retention_years             = local.retention_years
+  bucket_name     = "exl-model-landing-prod"
+  env             = "prod"
+  retention_years = local.retention_years
   # Two-phase bootstrap — see s3-replication-destination README "Apply order".
   # First apply: leave var.source_replication_role_arn unset (defaults to null).
   # Phase 3 (after source-side has applied): set the real role ARN in
