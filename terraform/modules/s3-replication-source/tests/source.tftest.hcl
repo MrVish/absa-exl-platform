@@ -1,11 +1,11 @@
 variables {
-  bucket_name              = "absa-model-handoff-dev"
-  env                      = "dev"
-  retention_years          = 1
-  prefix_filter            = "model-ready/"
-  destination_bucket_arn   = "arn:aws:s3:::exl-model-landing-dev"
-  destination_kms_key_arn  = "arn:aws:kms:af-south-1:222222222222:key/abc-123"
-  destination_account_id   = "222222222222"
+  bucket_name             = "absa-model-handoff-dev"
+  env                     = "dev"
+  retention_years         = 1
+  prefix_filter           = "model-ready/"
+  destination_bucket_arn  = "arn:aws:s3:::exl-model-landing-dev"
+  destination_kms_key_arn = "arn:aws:kms:af-south-1:222222222222:key/abc-123"
+  destination_account_id  = "222222222222"
   tags = {
     cost_center = "ml-platform"
     module      = "s3-replication-source"
