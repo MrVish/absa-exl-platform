@@ -50,24 +50,3 @@ resource "aws_flow_log" "vpc" {
 
   tags = local.common_tags
 }
-
-resource "aws_guardduty_detector" "this" {
-  count = var.enable_guardduty ? 1 : 0
-
-  enable                       = true
-  finding_publishing_frequency = "FIFTEEN_MINUTES"
-
-  tags = local.common_tags
-}
-
-resource "aws_securityhub_account" "this" {
-  count = var.enable_security_hub ? 1 : 0
-}
-
-resource "aws_securityhub_standards_subscription" "foundational" {
-  count = var.enable_security_hub ? 1 : 0
-
-  standards_arn = "arn:aws:securityhub:${data.aws_region.current.name}::standards/aws-foundational-security-best-practices/v/1.0.0"
-
-  depends_on = [aws_securityhub_account.this]
-}

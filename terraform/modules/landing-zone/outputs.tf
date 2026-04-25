@@ -23,11 +23,6 @@ output "flow_logs_log_group_arn" {
   value       = aws_cloudwatch_log_group.flow_logs.arn
 }
 
-output "guardduty_detector_id" {
-  description = "GuardDuty detector ID, or null if disabled."
-  value       = try(aws_guardduty_detector.this[0].id, null)
-}
-
 output "permissions_boundary_arn" {
   description = "ARN of the env-scoped permissions boundary policy. Attach this to workload IAM roles."
   value       = aws_iam_policy.env_scoped_boundary.arn
