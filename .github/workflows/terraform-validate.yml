@@ -2,9 +2,16 @@ name: Terraform Validate
 
 on:
   pull_request:
-    branches: [main]
+    # Trigger on PRs targeting main OR any phase-1/* branch — sprint-2
+    # PRs land on phase-1/foundation-kickoff before that branch merges
+    # to main, so [main] alone wouldn't validate the stacked PR.
+    branches:
+      - main
+      - "phase-1/**"
   push:
-    branches: [main]
+    branches:
+      - main
+      - "phase-1/**"
 
 permissions:
   contents: read
