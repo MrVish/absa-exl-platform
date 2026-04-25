@@ -1,6 +1,21 @@
+# Plan-only test fixture — uses mock_provider so the AWS provider's data
+# sources (aws_availability_zones, aws_region) don't make real API calls.
+# Must only ever be in test files. Real apply uses the caller's provider.
+mock_provider "aws" {
+  mock_data "aws_availability_zones" {
+    defaults = {
+      names = ["af-south-1a", "af-south-1b", "af-south-1c"]
+    }
+  }
+  mock_data "aws_region" {
+    defaults = {
+      name = "af-south-1"
+    }
+  }
+}
+
 variables {
   env                = "dev"
-  region             = "af-south-1"
   vpc_cidr           = "10.40.0.0/20"
   availability_zones = 3
   transit_gateway_id = "tgw-0123456789abcdef0"

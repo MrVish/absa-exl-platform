@@ -1,3 +1,7 @@
+# Plan-only test fixture — uses mock_provider so the AWS provider can
+# initialise without real AWS access. Real apply uses the caller's provider.
+mock_provider "aws" {}
+
 variables {
   env                                    = "dev"
   absa_identity_center_saml_provider_arn = "arn:aws:iam::000000000000:saml-provider/AWSSSO_test_DO_NOT_DELETE"
@@ -34,7 +38,9 @@ run "break_glass_trust_policy_requires_mfa" {
 }
 
 run "ci_deploy_sub_condition_includes_branch" {
-  command = plan
+  # 'apply' (not plan) — under mock_provider, aws_iam_role.assume_role_policy
+  # is computed-unknown at plan time. Apply produces the populated string.
+  command = apply
 
   assert {
     condition = strcontains(
@@ -46,7 +52,8 @@ run "ci_deploy_sub_condition_includes_branch" {
 }
 
 run "ci_deploy_inline_policy_denies_credential_mutation" {
-  command = plan
+  # 'apply' for the same mock_provider/computed-attr reason as above.
+  command = apply
 
   assert {
     condition = (
@@ -63,7 +70,8 @@ run "oidc_provider_uses_sts_client_id" {
   command = plan
 
   assert {
-    condition     = aws_iam_openid_connect_provider.github.client_id_list[0] == "sts.amazonaws.com"
+    # client_id_list is typed as a set, not a list — index access is invalid.
+    condition     = contains(aws_iam_openid_connect_provider.github.client_id_list, "sts.amazonaws.com")
     error_message = "GitHub OIDC provider client_id_list must include sts.amazonaws.com"
   }
 }
@@ -96,7 +104,8 @@ run "env_validation_rejects_unknown_value" {
 }
 
 run "n_branches_produce_n_sub_conditions" {
-  command = plan
+  # 'apply' for the same mock_provider/computed-attr reason as above.
+  command = apply
 
   variables {
     allowed_github_branches_for_apply = ["main", "release", "hotfix"]

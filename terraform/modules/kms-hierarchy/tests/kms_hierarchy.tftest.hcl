@@ -1,3 +1,18 @@
+# Plan-only test fixture — uses mock_provider so the AWS provider's data
+# sources don't make real API calls. Real apply uses the caller's provider.
+mock_provider "aws" {
+  mock_data "aws_caller_identity" {
+    defaults = {
+      account_id = "111111111111"
+    }
+  }
+  mock_data "aws_region" {
+    defaults = {
+      name = "af-south-1"
+    }
+  }
+}
+
 variables {
   env = "dev"
   tags = {
