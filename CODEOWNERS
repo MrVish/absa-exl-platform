@@ -1,0 +1,8 @@
+# Default: any change to terraform/modules/** requires platform-leads review
+terraform/modules/                 @platform-leads
+terraform/account-bootstrap/       @platform-leads
+docs/adr/                          @platform-leads @engagement-lead
+docs/architecture.md               @platform-leads @engagement-lead
+docs/compliance/                   @compliance-leads @platform-leads
+ci/                                @platform-leads
+.github/workflows/                 @platform-leads

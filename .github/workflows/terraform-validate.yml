@@ -1,0 +1,151 @@
+name: Terraform Validate
+
+on:
+  pull_request:
+    # Trigger on PRs targeting main OR any phase-1/* branch — sprint-2
+    # PRs land on phase-1/foundation-kickoff before that branch merges
+    # to main, so [main] alone wouldn't validate the stacked PR.
+    branches:
+      - main
+      - "phase-1/**"
+  push:
+    branches:
+      - main
+      - "phase-1/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  fmt:
+    name: terraform fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+  validate-modules:
+    name: validate (modules)
+    runs-on: ubuntu-latest
+    needs: fmt
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - landing-zone
+          - s3-replication-source
+          - s3-replication-destination
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+      - name: terraform init
+        run: terraform init -backend=false
+        working-directory: terraform/modules/${{ matrix.module }}
+      - name: terraform validate
+        run: terraform validate
+        working-directory: terraform/modules/${{ matrix.module }}
+      - name: terraform test
+        run: terraform test
+        working-directory: terraform/modules/${{ matrix.module }}
+        env:
+          # Plan-only tests don't need real AWS credentials, but the AWS
+          # provider's pre-init credentials check still requires these to
+          # be set. Region is the only one that affects plan output.
+          AWS_REGION: af-south-1
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+
+  validate-stacks:
+    name: validate (env + bootstrap stacks)
+    runs-on: ubuntu-latest
+    needs: fmt
+    strategy:
+      fail-fast: false
+      matrix:
+        stack:
+          - terraform/envs/dev/source
+          - terraform/envs/dev/destination
+          - terraform/envs/stg/source
+          - terraform/envs/stg/destination
+          - terraform/envs/prod/source
+          - terraform/envs/prod/destination
+          - terraform/account-bootstrap/exl-dev
+          - terraform/account-bootstrap/exl-stg
+          - terraform/account-bootstrap/exl-prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+      - name: terraform init
+        run: terraform init -backend=false
+        working-directory: ${{ matrix.stack }}
+      - name: terraform validate
+        run: terraform validate
+        working-directory: ${{ matrix.stack }}
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    needs: fmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.51.0
+      - name: tflint --init
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: tflint
+        run: tflint --recursive --config="${{ github.workspace }}/.tflint.hcl"
+
+  tfsec:
+    name: tfsec
+    runs-on: ubuntu-latest
+    needs: fmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          # Soft-fail: HIGH findings on intentional Allow-* patterns in
+          # iam-federation are documented as known limitations. Phase 1 also
+          # has interim AES256 on CloudTrail bucket (sprint 2 upgrades to
+          # SSE-KMS via kms-hierarchy). Findings still surface on PRs but
+          # don't block merge.
+          soft_fail: true
+          additional_args: --minimum-severity MEDIUM
+
+  checkov:
+    name: checkov
+    runs-on: ubuntu-latest
+    needs: fmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          # Soft-fail at all severities. Phase 1 carries interim states
+          # (AES256 CloudTrail SSE in sprint 1, env-scoped boundary
+          # 'Allow * minus deny' patterns) that are documented and tracked.
+          # Findings still surface on PRs but don't block merge.
+          soft_fail: true
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
