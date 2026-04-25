@@ -30,6 +30,16 @@ provider "aws" {
   }
 }
 
+module "kms_hierarchy" {
+  source = "../../modules/kms-hierarchy"
+
+  env = "dev"
+
+  tags = {
+    cost_center = "ml-platform"
+  }
+}
+
 # CloudTrail multi-region trail for the dev account
 resource "aws_cloudtrail" "this" {
   name                          = "exl-dev-trail"
@@ -66,15 +76,16 @@ resource "aws_s3_bucket_versioning" "cloudtrail" {
   }
 }
 
-# TODO(Phase 1 sprint 2): switch to SSE-KMS with a CMK from the
-# kms-hierarchy module once that module is built. AES256 is interim.
+# Phase 1 sprint 2: SSE-KMS via kms-hierarchy.cloudtrail_bucket_key_arn.
 resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
   bucket = aws_s3_bucket.cloudtrail.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = module.kms_hierarchy.cloudtrail_bucket_key_arn
     }
+    bucket_key_enabled = true
   }
 }
 
@@ -120,6 +131,43 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
       },
     ]
   })
+}
+
+# ---------------------------------------------------------------------
+# Account-singleton resources (moved from landing-zone in sprint 2).
+# Each EXL account has exactly one of these.
+# ---------------------------------------------------------------------
+
+resource "aws_iam_account_password_policy" "this" {
+  minimum_password_length        = 14
+  require_lowercase_characters   = true
+  require_uppercase_characters   = true
+  require_numbers                = true
+  require_symbols                = true
+  allow_users_to_change_password = true
+  max_password_age               = 90
+  password_reuse_prevention      = 24
+  hard_expiry                    = false
+}
+
+resource "aws_guardduty_detector" "this" {
+  enable                       = true
+  finding_publishing_frequency = "FIFTEEN_MINUTES"
+
+  tags = {
+    env         = "dev"
+    cost_center = "ml-platform"
+    managed_by  = "terraform"
+    stack       = "account-bootstrap/exl-dev"
+  }
+}
+
+resource "aws_securityhub_account" "this" {}
+
+resource "aws_securityhub_standards_subscription" "foundational" {
+  standards_arn = "arn:aws:securityhub:${var.region}::standards/aws-foundational-security-best-practices/v/1.0.0"
+
+  depends_on = [aws_securityhub_account.this]
 }
 
 data "aws_caller_identity" "current" {}
