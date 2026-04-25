@@ -37,7 +37,7 @@ The plan creates ~25 substantive files plus ~40 placeholder / stub files. Files 
 - Create: `.editorconfig`
 - Create: `.pre-commit-config.yaml`
 - Create: `CODEOWNERS`
-- Create: 17 stub README files for unbuilt modules and top-level dirs (listed in Step 4)
+- Create: 12 stub README files for unbuilt modules and top-level dirs (listed in Step 4)
 - Create: `.gitkeep` in `docs/runbooks/` and `ci/policies/`
 
 - [ ] **Step 1: Create the working branch**
@@ -3289,7 +3289,7 @@ gh pr create --title "Phase 1 — Foundation kickoff (engagement-lead checkpoint
 Phase 1 foundation artifact for the engagement-lead checkpoint at
 \`CLAUDE_CODE_BRIEF.md\` §12 step 7.
 
-- Repo scaffold + 17 stub READMEs for unbuilt modules / dirs
+- Repo scaffold + 12 stub READMEs for unbuilt modules / dirs
 - Architecture document, four ADRs (data movement, dual-module split, KMS
   signing, account topology), compliance control matrix
 - Three Terraform modules: \`landing-zone\`, \`s3-replication-source\`,

@@ -91,7 +91,7 @@ data "terraform_remote_state" "source" {
 module "destination" {
   source                       = "../../modules/s3-replication-destination"
   source_replication_role_arn  = data.terraform_remote_state.source.outputs.replication_role_arn
-  source_account_id            = data.terraform_remote_state.source.outputs.account_id
+  source_account_id            = "111111111111"  # ABSA account ID — hardcoded per env
   # ...
 }
 ```

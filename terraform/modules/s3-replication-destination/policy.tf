@@ -19,15 +19,12 @@ resource "aws_s3_bucket_policy" "this" {
         Resource = "${aws_s3_bucket.this.arn}/*"
       },
       {
-        Sid    = "AllowSourceAccountListBucket"
+        Sid    = "AllowSourceAccountReadBucketVersioning"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${var.source_account_id}:root"
         }
-        Action = [
-          "s3:GetBucketVersioning",
-          "s3:PutBucketVersioning",
-        ]
+        Action   = "s3:GetBucketVersioning"
         Resource = aws_s3_bucket.this.arn
       },
     ]

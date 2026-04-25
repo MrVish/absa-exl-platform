@@ -4,7 +4,6 @@ variables {
   retention_years             = 1
   source_replication_role_arn = "arn:aws:iam::111111111111:role/dev-s3-replication-role"
   source_account_id           = "111111111111"
-  prefix_filter               = "model-ready/"
   alarm_threshold_seconds     = 900
   tags = {
     cost_center = "ml-platform"

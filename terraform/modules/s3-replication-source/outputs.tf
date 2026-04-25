@@ -22,8 +22,3 @@ output "replication_role_arn" {
   description = "ARN of the IAM role used by S3 to replicate. Pass this to the destination side."
   value       = aws_iam_role.replication.arn
 }
-
-output "replication_metric_namespace" {
-  description = "CloudWatch metric namespace for replication metrics. Always AWS/S3 — exposed for caller convenience."
-  value       = "AWS/S3"
-}

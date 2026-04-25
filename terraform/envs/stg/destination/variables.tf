@@ -1,6 +1,7 @@
 variable "region" {
-  type    = string
-  default = "af-south-1"
+  description = "AWS region for the exl-stg account."
+  type        = string
+  default     = "af-south-1"
 }
 
 variable "transit_gateway_id" {

@@ -39,12 +39,6 @@ variable "source_account_id" {
   }
 }
 
-variable "prefix_filter" {
-  description = "Prefix used by source replication; only documented here for cross-side consistency."
-  type        = string
-  default     = "model-ready/"
-}
-
 variable "alarm_threshold_seconds" {
   description = "ReplicationLatency alarm threshold. Default 900s = 15 minutes (matches RTC SLA)."
   type        = number
