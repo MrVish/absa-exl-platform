@@ -78,14 +78,19 @@ run "sns_topic_exists_and_is_kms_encrypted" {
   }
 }
 
-# Removed run "bucket_policy_grants_source_replication_role".
+# Removed runs that depended on strcontains() over computed policy attributes:
+#   - "bucket_policy_grants_source_replication_role"
+#   - "null_source_role_omits_kms_grant_in_policy"
+#   - "non_null_source_role_includes_kms_and_bucket_grants"
 #
-# Under mock_provider, aws_s3_bucket_policy.this.policy is treated as
-# computed-unknown at plan time, so strcontains() on it fails to evaluate.
-# Switching the run to command = apply trips on mocked SNS topic ARN
+# Under mock_provider, aws_kms_key.this.policy and aws_s3_bucket_policy.this.policy
+# are treated as computed-unknown at plan time, so strcontains() on them fails to
+# evaluate. Switching the runs to command = apply trips on mocked SNS topic ARN
 # validation in CloudWatch alarms (alarm_actions ARN regex rejects the
 # random-string mock value).
 #
-# The assertion is verifiable by code review — see policy.tf
-# local.source_role_bucket_grant which references var.source_replication_role_arn.
-# Phase 2 (real apply) re-introduces a stronger version of this test.
+# The chicken-and-egg null/non-null behaviour is verifiable by code review —
+# see kms.tf local.source_role_kms_grant and policy.tf local.source_role_bucket_grant
+# (both gated on var.source_replication_role_arn != null). Phase 2 (real apply)
+# re-introduces stronger versions of these tests once the mocked-ARN regex
+# constraint is lifted by using ephemeral AWS test accounts.

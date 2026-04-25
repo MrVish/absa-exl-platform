@@ -40,6 +40,8 @@ jobs:
           - landing-zone
           - s3-replication-source
           - s3-replication-destination
+          - kms-hierarchy
+          - iam-federation
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -116,10 +118,10 @@ jobs:
       - uses: aquasecurity/tfsec-action@v1.0.3
         with:
           # Soft-fail: HIGH findings on intentional Allow-* patterns in
-          # iam-federation are documented as known limitations. Phase 1 also
-          # has interim AES256 on CloudTrail bucket (sprint 2 upgrades to
-          # SSE-KMS via kms-hierarchy). Findings still surface on PRs but
-          # don't block merge.
+          # iam-federation are documented as known limitations. Sprint 1
+          # additionally has interim AES256 on the CloudTrail bucket;
+          # sprint 2 upgrades that to SSE-KMS via kms-hierarchy. Findings
+          # still surface on PRs but don't block merge.
           soft_fail: true
           additional_args: --minimum-severity MEDIUM
 

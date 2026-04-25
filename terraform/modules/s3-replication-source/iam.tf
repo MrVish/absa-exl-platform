@@ -53,9 +53,12 @@ resource "aws_iam_policy" "replication" {
         Resource = "${var.destination_bucket_arn}/*"
       },
       {
-        Sid      = "EncryptWithDestinationKey"
-        Effect   = "Allow"
-        Action   = "kms:Encrypt"
+        Sid    = "EncryptWithDestinationKey"
+        Effect = "Allow"
+        Action = [
+          "kms:Encrypt",
+          "kms:GenerateDataKey",
+        ]
         Resource = var.destination_kms_key_arn
       },
     ]

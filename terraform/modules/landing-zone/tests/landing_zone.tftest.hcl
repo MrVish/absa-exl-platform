@@ -79,32 +79,6 @@ run "flow_logs_are_enabled" {
   }
 }
 
-run "guardduty_detector_exists_when_enabled" {
-  command = plan
-
-  variables {
-    enable_guardduty = true
-  }
-
-  assert {
-    condition     = length(aws_guardduty_detector.this) == 1
-    error_message = "GuardDuty detector must be created when enable_guardduty=true"
-  }
-}
-
-run "security_hub_uses_foundational_standard" {
-  command = plan
-
-  variables {
-    enable_security_hub = true
-  }
-
-  assert {
-    condition     = length(aws_securityhub_standards_subscription.foundational) == 1
-    error_message = "Security Hub Foundational standard must be subscribed"
-  }
-}
-
 run "env_validation_rejects_unknown_value" {
   command = plan
 

@@ -1,9 +1,11 @@
-# TODO(Phase 1 sprint 2): set kms_key_id = module.kms_hierarchy.flow_logs_key_arn
-# once the kms-hierarchy module is built. tfsec aws-cloudwatch-log-group-customer-key
-# (HIGH) and checkov CKV_AWS_158 are expected failures until then.
+# Phase 1 sprint 2: SSE-KMS via kms-hierarchy.flow_logs_cw_key. The key
+# is looked up by its alias to avoid cross-stack remote-state plumbing.
+# Apply order: terraform/account-bootstrap/exl-{env}/ must apply before
+# this destination stack so the alias exists.
 resource "aws_cloudwatch_log_group" "flow_logs" {
   name              = "/aws/vpc/flow-logs/${local.name_prefix}"
   retention_in_days = var.flow_logs_retention_days
+  kms_key_id        = data.aws_kms_alias.flow_logs_cw.target_key_arn
 
   tags = local.common_tags
 }
@@ -29,16 +31,25 @@ resource "aws_iam_role_policy" "flow_logs" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams",
-      ]
-      Resource = "${aws_cloudwatch_log_group.flow_logs.arn}:*"
-    }]
+    Statement = [
+      {
+        Sid    = "WriteFlowLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+        ]
+        Resource = "${aws_cloudwatch_log_group.flow_logs.arn}:*"
+      },
+      {
+        Sid      = "DescribeLogGroups"
+        Effect   = "Allow"
+        Action   = "logs:DescribeLogGroups"
+        Resource = "*"
+      },
+    ]
   })
 }
 
@@ -49,25 +60,4 @@ resource "aws_flow_log" "vpc" {
   vpc_id          = aws_vpc.this.id
 
   tags = local.common_tags
-}
-
-resource "aws_guardduty_detector" "this" {
-  count = var.enable_guardduty ? 1 : 0
-
-  enable                       = true
-  finding_publishing_frequency = "FIFTEEN_MINUTES"
-
-  tags = local.common_tags
-}
-
-resource "aws_securityhub_account" "this" {
-  count = var.enable_security_hub ? 1 : 0
-}
-
-resource "aws_securityhub_standards_subscription" "foundational" {
-  count = var.enable_security_hub ? 1 : 0
-
-  standards_arn = "arn:aws:securityhub:${data.aws_region.current.name}::standards/aws-foundational-security-best-practices/v/1.0.0"
-
-  depends_on = [aws_securityhub_account.this]
 }

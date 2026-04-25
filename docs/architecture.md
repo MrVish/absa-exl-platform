@@ -96,9 +96,9 @@ Highlights:
 
 Phase 1 — foundation. Lands:
 
-- Workload-account landing zone (VPC, subnets, TGW attachment, flow logs, GuardDuty, Security Hub) for each EXL account.
+- Workload-account landing zone (VPC, subnets, TGW attachment, flow logs (KMS-encrypted), permissions boundary policy) for each EXL account.
 - S3 replication module pair (source + destination).
 - ADRs and architecture documentation.
 - CI validation pipeline (plan-validate, no apply).
 
-KMS-hierarchy and IAM-federation modules are scheduled for the second sprint of Phase 1. Pipeline Factory, Code Intake, Registry, Scoring Engine, and PIR Engine follow in later phases per the brief's plan.
+KMS-hierarchy and IAM-federation modules built in Phase 1 sprint 2 (see `docs/adr/0005-kms-hierarchy-audit-evidence-only.md`). Account-singleton resources (CloudTrail, GuardDuty, Security Hub, password policy) live in `terraform/account-bootstrap/exl-{env}/`. Pipeline Factory, Code Intake, Registry, Scoring Engine, and PIR Engine follow in later phases per the brief's plan.

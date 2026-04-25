@@ -34,18 +34,6 @@ variable "transit_gateway_id" {
   type        = string
 }
 
-variable "enable_guardduty" {
-  description = "Whether to enable GuardDuty in this account. Default true; set false only for ephemeral test accounts."
-  type        = bool
-  default     = true
-}
-
-variable "enable_security_hub" {
-  description = "Whether to enable Security Hub. Default true."
-  type        = bool
-  default     = true
-}
-
 variable "flow_logs_retention_days" {
   description = "Retention for VPC flow logs in CloudWatch. Defaults to 365 in prod, 30 elsewhere via env tfvars."
   type        = number
