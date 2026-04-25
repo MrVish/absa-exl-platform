@@ -33,6 +33,8 @@ jobs:
           - landing-zone
           - s3-replication-source
           - s3-replication-destination
+          - kms-hierarchy
+          - iam-federation
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
