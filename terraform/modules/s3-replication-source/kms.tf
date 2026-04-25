@@ -22,10 +22,7 @@ resource "aws_kms_key" "this" {
         Principal = {
           AWS = aws_iam_role.replication.arn
         }
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey",
-        ]
+        Action   = "kms:Decrypt"
         Resource = "*"
       },
     ]

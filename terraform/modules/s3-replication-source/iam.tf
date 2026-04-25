@@ -36,12 +36,9 @@ resource "aws_iam_policy" "replication" {
         ]
       },
       {
-        Sid    = "DecryptWithSourceKey"
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey",
-        ]
+        Sid      = "DecryptWithSourceKey"
+        Effect   = "Allow"
+        Action   = "kms:Decrypt"
         Resource = aws_kms_key.this.arn
       },
       {
@@ -62,6 +59,8 @@ resource "aws_iam_policy" "replication" {
       },
     ]
   })
+
+  tags = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "replication" {

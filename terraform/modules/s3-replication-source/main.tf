@@ -11,6 +11,10 @@ resource "aws_s3_bucket" "this" {
   object_lock_enabled = true
 
   tags = local.common_tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "this" {
