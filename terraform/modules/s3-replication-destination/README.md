@@ -32,6 +32,7 @@ This module supports a two-phase bootstrap because AWS validates IAM principals 
 - KMS key, bucket, alarms, SNS topic all provision.
 - KMS key policy contains only the `AllowAccountRoot` statement.
 - Bucket policy contains only the `AllowSourceAccountReadBucketVersioning` statement.
+- **S3 replication writes from the source side will fail in this state.** This is expected — replication does not begin until Phase 3 grants the source role its required permissions on the destination KMS key and bucket.
 
 **Phase 2 (source side applies):**
 - Source side provisions the replication role + bucket + KMS key + replication configuration.

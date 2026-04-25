@@ -52,12 +52,11 @@ module "replication_destination" {
   env                         = "prod"
   retention_years             = local.retention_years
   # Two-phase bootstrap — see s3-replication-destination README "Apply order".
-  # First apply: keep source_replication_role_arn = null; the destination
-  # provisions without source-role grants.
-  # After the source-side has applied, replace this null with the real
-  # role ARN (e.g. data.terraform_remote_state.source.outputs.replication_role_arn)
-  # and re-apply.
-  source_replication_role_arn = null
+  # First apply: leave var.source_replication_role_arn unset (defaults to null).
+  # Phase 3 (after source-side has applied): set the real role ARN in
+  # terraform.tfvars (or via -var) and re-apply. The variable forwards
+  # through to the module.
+  source_replication_role_arn = var.source_replication_role_arn
   source_account_id           = var.source_account_id
   alarm_threshold_seconds     = 900
 

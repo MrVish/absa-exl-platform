@@ -13,6 +13,7 @@ locals {
     Principal = { AWS = var.source_replication_role_arn }
     Action = [
       "kms:Encrypt",
+      "kms:GenerateDataKey",
       "kms:DescribeKey",
     ]
     Resource = "*"

@@ -11,7 +11,9 @@ variable "transit_gateway_id" {
 
 variable "source_replication_role_arn" {
   type        = string
-  description = "Output replication_role_arn from the stg source stack."
+  nullable    = true
+  default     = null
+  description = "ARN of the stg ABSA source replication role. Pass null on first apply (before source-side has applied); set to the real ARN via tfvars or -var for Phase 3 re-apply. See module README 'Apply order' for the full bootstrap sequence."
 }
 
 variable "source_account_id" {
