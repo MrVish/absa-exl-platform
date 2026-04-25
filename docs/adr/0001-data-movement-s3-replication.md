@@ -49,7 +49,7 @@ PrivateLink is reserved for **control-plane** API calls between ABSA and EXL: th
 
 - Compliance-mode object lock is a one-way door — buckets cannot be deleted in place, and retention can only be extended, never shortened. Per-env tiered retention partially mitigates this for non-prod (a 30-day dev retention means dev mistakes age out quickly). For prod, this is the intended audit posture.
 - 15-minute latency floor: not suitable for a future real-time inference tier. Real-time is explicitly out of scope for the current cohort and would warrant a separate ADR.
-- Replication is asynchronous and one-way. If a scoring run produces output that ABSA needs back, that delivery uses a different path (API Gateway + SFTP, per architecture §2 step 10), not reverse replication.
+- Replication is asynchronous and one-way. If a scoring run produces output that ABSA needs back, that delivery uses a different path (API Gateway + SFTP, per `CLAUDE_CODE_BRIEF.md` §2 Track B step 10), not reverse replication.
 
 ## Alternatives considered
 

@@ -9,7 +9,7 @@
 
 ## Context
 
-The brief at `CLAUDE_CODE_BRIEF.md` §4 lists a single `terraform/modules/s3-replication/` module taking `source_bucket_name` (in ABSA) and `destination_bucket_name` (in EXL) as inputs. Two interpretations were possible:
+The brief at `CLAUDE_CODE_BRIEF.md` §4 lists a single `terraform/modules/s3-replication/` module taking `source_bucket_name` (in ABSA) and `destination_bucket_name` (in EXL) as inputs. Three interpretations were possible:
 
 1. **Single-state, dual-account module.** This repo owns Terraform for both sides; one `terraform apply` provisions both accounts via assumed-role.
 2. **EXL-side-only module with a contract to ABSA.** This repo provisions EXL-side resources; ABSA's IaC team owns the source-side module.
@@ -24,7 +24,7 @@ Split the canonical `s3-replication` module into two siblings:
 - `terraform/modules/s3-replication-source/` — deployed into the ABSA account by ABSA's IaC team. Provisions the source bucket, source-side KMS CMK, replication role, and replication configuration.
 - `terraform/modules/s3-replication-destination/` — deployed into the matching EXL env account by EXL's IaC team. Provisions the destination bucket, destination-side KMS CMK, bucket policy granting the replication role, an SNS topic, and CloudWatch alarms on `ReplicationLatency` and `FailedReplication`.
 
-Each side keeps its own Terraform state. Outputs from the source module feed inputs of the destination module (and vice versa for KMS and role ARNs); the wiring is documented in [`../terraform/shared/replication-contract.md`](../../terraform/shared/replication-contract.md) and exchanged via `terraform_remote_state` data sources or a shared variable file once both apply destinations exist.
+Each side keeps its own Terraform state. Outputs from the source module feed inputs of the destination module (and vice versa for KMS and role ARNs); the wiring is documented in [`terraform/shared/replication-contract.md`](../../terraform/shared/replication-contract.md) and exchanged via `terraform_remote_state` data sources or a shared variable file once both apply destinations exist.
 
 ## Consequences
 

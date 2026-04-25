@@ -449,7 +449,7 @@ PrivateLink is reserved for **control-plane** API calls between ABSA and EXL: th
 
 - Compliance-mode object lock is a one-way door — buckets cannot be deleted in place, and retention can only be extended, never shortened. Per-env tiered retention partially mitigates this for non-prod (a 30-day dev retention means dev mistakes age out quickly). For prod, this is the intended audit posture.
 - 15-minute latency floor: not suitable for a future real-time inference tier. Real-time is explicitly out of scope for the current cohort and would warrant a separate ADR.
-- Replication is asynchronous and one-way. If a scoring run produces output that ABSA needs back, that delivery uses a different path (API Gateway + SFTP, per architecture §2 step 10), not reverse replication.
+- Replication is asynchronous and one-way. If a scoring run produces output that ABSA needs back, that delivery uses a different path (API Gateway + SFTP, per `CLAUDE_CODE_BRIEF.md` §2 Track B step 10), not reverse replication.
 
 ## Alternatives considered
 
@@ -485,7 +485,7 @@ Save to `docs/adr/0001-data-movement-s3-replication.md`.
 
 ## Context
 
-The brief at `CLAUDE_CODE_BRIEF.md` §4 lists a single `terraform/modules/s3-replication/` module taking `source_bucket_name` (in ABSA) and `destination_bucket_name` (in EXL) as inputs. Two interpretations were possible:
+The brief at `CLAUDE_CODE_BRIEF.md` §4 lists a single `terraform/modules/s3-replication/` module taking `source_bucket_name` (in ABSA) and `destination_bucket_name` (in EXL) as inputs. Three interpretations were possible:
 
 1. **Single-state, dual-account module.** This repo owns Terraform for both sides; one `terraform apply` provisions both accounts via assumed-role.
 2. **EXL-side-only module with a contract to ABSA.** This repo provisions EXL-side resources; ABSA's IaC team owns the source-side module.
@@ -500,7 +500,7 @@ Split the canonical `s3-replication` module into two siblings:
 - `terraform/modules/s3-replication-source/` — deployed into the ABSA account by ABSA's IaC team. Provisions the source bucket, source-side KMS CMK, replication role, and replication configuration.
 - `terraform/modules/s3-replication-destination/` — deployed into the matching EXL env account by EXL's IaC team. Provisions the destination bucket, destination-side KMS CMK, bucket policy granting the replication role, an SNS topic, and CloudWatch alarms on `ReplicationLatency` and `FailedReplication`.
 
-Each side keeps its own Terraform state. Outputs from the source module feed inputs of the destination module (and vice versa for KMS and role ARNs); the wiring is documented in [`../terraform/shared/replication-contract.md`](../../terraform/shared/replication-contract.md) and exchanged via `terraform_remote_state` data sources or a shared variable file once both apply destinations exist.
+Each side keeps its own Terraform state. Outputs from the source module feed inputs of the destination module (and vice versa for KMS and role ARNs); the wiring is documented in [`terraform/shared/replication-contract.md`](../../terraform/shared/replication-contract.md) and exchanged via `terraform_remote_state` data sources or a shared variable file once both apply destinations exist.
 
 ## Consequences
 
@@ -673,7 +673,7 @@ Save to `docs/adr/0004-account-topology-1-absa-3-exl.md`.
 | **POPIA s14 — retention** | Object-lock compliance mode with per-env tiered retention (default 7 years prod) | `terraform/modules/s3-replication-source/main.tf` (object_lock_configuration block) | EXL Platform Engineering |
 | **SARB GOI 5 — model documentation immutability** | Object-lock compliance mode prevents deletion / modification before retention expires | Same as above | EXL Platform Engineering |
 | **SR 11-7 III.4 — model implementation evidence** | CloudTrail in both accounts logs every S3 object operation, KMS Sign / Decrypt call, and IAM AssumeRole | `terraform/account-bootstrap/exl-{env}/main.tf` (CloudTrail), assumed for ABSA side | EXL Platform Engineering, ABSA Cloud Platform |
-| **ISO 27001 A.13.2.1 — information transfer** | S3 replication with RTC, KMS encryption, IAM least-privilege replication role | `terraform/modules/s3-replication-source/iam.tf`, `replication.tf` | EXL Platform Engineering |
+| **ISO 27001 A.13.2.1 — information transfer** | S3 replication with RTC, KMS encryption, IAM least-privilege replication role | `terraform/modules/s3-replication-source/iam.tf`, `terraform/modules/s3-replication-source/replication.tf` | EXL Platform Engineering |
 | **ISO 27001 A.12.4.1 — event logging** | VPC flow logs, GuardDuty, Security Hub enabled in every EXL account | `terraform/modules/landing-zone/security.tf` | EXL Platform Engineering |
 | **SOC 2 CC6.1 — logical access** | IAM permissions boundaries on EXL workload roles enforce env-tag-based deny conditions | `terraform/modules/landing-zone/iam.tf` | EXL Platform Engineering |
 | **ABSA GMRMG — model lifecycle traceability** | Per-env source buckets give per-env scoring-run lineage from the moment data leaves ABSA | `terraform/modules/s3-replication-source/main.tf` (called per env) | ABSA Model Risk |
