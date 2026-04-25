@@ -153,13 +153,6 @@ resource "aws_iam_account_password_policy" "this" {
 resource "aws_guardduty_detector" "this" {
   enable                       = true
   finding_publishing_frequency = "FIFTEEN_MINUTES"
-
-  tags = {
-    env         = "stg"
-    cost_center = "ml-platform"
-    managed_by  = "terraform"
-    stack       = "account-bootstrap/exl-stg"
-  }
 }
 
 resource "aws_securityhub_account" "this" {}

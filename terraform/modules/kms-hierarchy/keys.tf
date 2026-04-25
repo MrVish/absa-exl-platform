@@ -1,3 +1,13 @@
+# IMPORTANT — region constraint:
+# The AllowCloudTrailEncryptDecrypt statement below uses
+# data.aws_region.current.name to construct the trail ARN in
+# aws:SourceArn. data.aws_region.current resolves against THIS module's
+# AWS provider — typically the same provider as the calling stack. If a
+# future refactor passes a provider alias with a different region, the
+# trail ARN condition will silently stop matching and CloudTrail will
+# fail to encrypt log files. To avoid this, callers must ensure
+# kms-hierarchy and the CloudTrail trail are provisioned under the same
+# AWS provider (which is the convention today).
 resource "aws_kms_key" "cloudtrail_bucket" {
   description             = "Audit-evidence CMK for the ${var.env} CloudTrail S3 bucket. Rotation enabled."
   deletion_window_in_days = 30
