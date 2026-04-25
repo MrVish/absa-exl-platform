@@ -8,11 +8,6 @@ variable "env" {
   }
 }
 
-variable "region" {
-  description = "AWS region for the workload-account landing zone."
-  type        = string
-}
-
 variable "vpc_cidr" {
   description = "CIDR block for the VPC. Must not overlap with other env CIDRs in the same account."
   type        = string

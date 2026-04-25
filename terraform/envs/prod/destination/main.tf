@@ -34,13 +34,10 @@ module "landing_zone" {
   source = "../../../modules/landing-zone"
 
   env                = "prod"
-  region             = var.region
   vpc_cidr           = "10.40.32.0/20"
   availability_zones = 3
   transit_gateway_id = var.transit_gateway_id
 
-  enable_guardduty         = true
-  enable_security_hub      = true
   flow_logs_retention_days = 365
 
   tags = {
