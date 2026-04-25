@@ -16,7 +16,7 @@ The plan creates ~25 substantive files plus ~40 placeholder / stub files. Files 
 
 | Task | Layer | Files (substantive) |
 | --- | --- | --- |
-| 1 | Repo metadata + dir scaffold | `README.md`, `.gitignore`, `.editorconfig`, `.pre-commit-config.yaml`, `CODEOWNERS`, 17 stub READMEs |
+| 1 | Repo metadata + dir scaffold | `README.md`, `.gitignore`, `.editorconfig`, `.pre-commit-config.yaml`, `CODEOWNERS`, 12 stub READMEs |
 | 2 | Architecture + ADRs + contracts | `docs/architecture.md`, 4 ADR files, `docs/compliance/control-matrix.md`, `terraform/shared/replication-contract.md` |
 | 3 | landing-zone module | 6 `.tf` files + `README.md` + `tests/landing_zone.tftest.hcl` |
 | 4 | s3-replication-source module | 6 `.tf` files + `README.md` + `tests/source.tftest.hcl` |
@@ -67,7 +67,6 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
-.terraform.lock.hcl
 
 # Editors
 .vscode/
