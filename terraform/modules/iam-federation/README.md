@@ -16,6 +16,12 @@ ABSA's central platform team owns IAM Identity Center / SSO federation per [ADR-
 
 All five roles attach `var.permissions_boundary_arn` (the env-scoped boundary from `landing-zone`).
 
+## Break-glass operational caveat
+
+The break-glass role's trust policy requires `aws:MultiFactorAuthPresent = true` via the `Bool` operator. This depends on ABSA's Identity Center SAML attribute mapping releasing the MFA attribute in assertions for MFA-authenticated users. If the attribute is not released, the role will be silently unusable — every AssumeRole attempt is denied with no clear root-cause indication.
+
+**Pre-Phase-2 verification:** confirm with ABSA's central platform team that Identity Center includes the MFA attribute in SAML assertion context. The alternative operator `BoolIfExists` would allow assumption when the attribute is absent (a security regression), so `Bool` is the correct choice — but the SAML attribute release must be verified.
+
 ## GitHub OIDC trust policy
 
 The ci-deploy role's trust policy uses both:
@@ -26,7 +32,17 @@ This combination prevents the "any-repo can assume" vulnerability that has cause
 
 ## GitHub OIDC root CA thumbprint
 
-Stored as `local.github_oidc_thumbprint` in `main.tf`. Currently `1c58a3a8518e8759bf075b76b750d4f2df264fcd`. GitHub rotates this CA periodically — verify the current value against [GitHub's OIDC documentation](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) before first apply.
+Stored as `local.github_oidc_thumbprint` in `main.tf`. Currently `6938fd4d98bab03faadb97b34396831e3780aea1` (updated 2023). GitHub rotates this CA periodically — verify the current value against [GitHub's OIDC documentation](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) before first apply. AWS provider 5.36+ ignores thumbprint_list at runtime for JWKS-backed providers; the field is required by the resource schema but not load-bearing for security.
+
+## ci-deploy IAM mutation surface — known limitation
+
+The ci-deploy role has `Allow * on *` baseline with explicit Deny on credential mutation, key destruction, and audit evasion (see `oidc.tf`). The deny list does NOT include `iam:PutRolePolicy`, `iam:AttachRolePolicy`, or `iam:PassRole`, because legitimate Terraform role-management operations require them. The permissions boundary attached to ci-deploy does NOT itself prevent cross-role policy mutation within the env.
+
+**Implication:** ci-deploy can mutate the inline / attached policies of any role in this env, including platform_engineer, platform_operator, and break_glass. A compromised CI workflow could grant itself or another role broader effective permissions before re-running.
+
+**Mitigation in Phase 1:** OIDC trust scoping (only specific branches in the configured repo can assume ci-deploy) limits the attack surface to insider compromise of those branches.
+
+**Phase 2 work:** review whether to add a targeted Allow on `iam:PassRole` with service-principal conditions, paired with broader denies on cross-role policy mutation. Tracked as an open item.
 
 ## Usage
 

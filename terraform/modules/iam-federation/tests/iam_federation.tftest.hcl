@@ -94,3 +94,20 @@ run "env_validation_rejects_unknown_value" {
     var.env,
   ]
 }
+
+run "n_branches_produce_n_sub_conditions" {
+  command = plan
+
+  variables {
+    allowed_github_branches_for_apply = ["main", "release", "hotfix"]
+  }
+
+  assert {
+    condition = alltrue([
+      strcontains(aws_iam_role.ci_deploy.assume_role_policy, "repo:absa-group/absa-exl-platform:ref:refs/heads/main"),
+      strcontains(aws_iam_role.ci_deploy.assume_role_policy, "repo:absa-group/absa-exl-platform:ref:refs/heads/release"),
+      strcontains(aws_iam_role.ci_deploy.assume_role_policy, "repo:absa-group/absa-exl-platform:ref:refs/heads/hotfix"),
+    ])
+    error_message = "When N branches are configured, the ci-deploy trust policy must contain N corresponding sub conditions"
+  }
+}

@@ -58,6 +58,9 @@ resource "aws_iam_role_policy" "ci_deploy" {
           "iam:DeleteLoginProfile",
           "iam:DeactivateMFADevice",
           "iam:DeleteVirtualMFADevice",
+          "iam:PutUserPolicy",
+          "iam:AttachUserPolicy",
+          "iam:UpdateAssumeRolePolicy",
         ]
         Resource = "*"
       },

@@ -14,6 +14,20 @@ locals {
     }]
   })
 
+  # IMPORTANT — break_glass MFA enforcement caveat:
+  #
+  # This trust policy uses Bool (not BoolIfExists) on aws:MultiFactorAuthPresent.
+  # Bool returns false when the condition key is absent, which is the desired
+  # block-by-default behaviour. HOWEVER: this depends on ABSA's Identity Center
+  # SAML attribute mapping releasing aws:MultiFactorAuthPresent in assertions for
+  # users who authenticated with MFA. If the attribute is NOT released, every
+  # break-glass AssumeRole attempt will be silently denied with no clear error,
+  # making the role unusable at incident time.
+  #
+  # Pre-Phase-2 verification required: confirm ABSA Identity Center includes the
+  # MFA attribute in SAML assertion context for the federation_session_duration
+  # claim mapping. See open-items in
+  # docs/superpowers/specs/2026-04-25-absa-exl-phase-1-sprint-2-design.md §12.
   break_glass_assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{

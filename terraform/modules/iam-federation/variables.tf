@@ -29,9 +29,14 @@ variable "github_org_slash_repo" {
 }
 
 variable "allowed_github_branches_for_apply" {
-  description = "List of branch names from which the ci-deploy role may be assumed. Each entry produces a sub condition."
+  description = "List of branch names from which the ci-deploy role may be assumed. Each entry produces a sub condition. Must contain at least one branch — empty list would remove the repo-scoping protection entirely."
   type        = list(string)
   default     = ["main"]
+
+  validation {
+    condition     = length(var.allowed_github_branches_for_apply) > 0
+    error_message = "allowed_github_branches_for_apply must contain at least one branch (passing an empty list would remove repo-scoping in the ci-deploy OIDC trust policy)."
+  }
 }
 
 variable "tags" {
