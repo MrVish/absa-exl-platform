@@ -1,3 +1,24 @@
+locals {
+  account_root_kms_grant = {
+    Sid       = "AllowAccountRoot"
+    Effect    = "Allow"
+    Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+    Action    = "kms:*"
+    Resource  = "*"
+  }
+
+  source_role_kms_grant = var.source_replication_role_arn == null ? [] : [{
+    Sid       = "AllowSourceReplicationRoleEncrypt"
+    Effect    = "Allow"
+    Principal = { AWS = var.source_replication_role_arn }
+    Action = [
+      "kms:Encrypt",
+      "kms:DescribeKey",
+    ]
+    Resource = "*"
+  }]
+}
+
 resource "aws_kms_key" "this" {
   description             = "Destination-side CMK for ${var.bucket_name}"
   deletion_window_in_days = 30
@@ -5,28 +26,8 @@ resource "aws_kms_key" "this" {
   key_usage               = "ENCRYPT_DECRYPT"
 
   policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "AllowAccountRoot"
-        Effect    = "Allow"
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        Action    = "kms:*"
-        Resource  = "*"
-      },
-      {
-        Sid    = "AllowSourceReplicationRoleEncrypt"
-        Effect = "Allow"
-        Principal = {
-          AWS = var.source_replication_role_arn
-        }
-        Action = [
-          "kms:Encrypt",
-          "kms:DescribeKey",
-        ]
-        Resource = "*"
-      },
-    ]
+    Version   = "2012-10-17"
+    Statement = concat([local.account_root_kms_grant], local.source_role_kms_grant)
   })
 
   tags = local.common_tags

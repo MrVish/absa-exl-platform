@@ -51,7 +51,13 @@ module "replication_destination" {
   bucket_name                 = "exl-model-landing-dev"
   env                         = "dev"
   retention_years             = local.retention_years
-  source_replication_role_arn = var.source_replication_role_arn
+  # Two-phase bootstrap — see s3-replication-destination README "Apply order".
+  # First apply: keep source_replication_role_arn = null; the destination
+  # provisions without source-role grants.
+  # After the source-side has applied, replace this null with the real
+  # role ARN (e.g. data.terraform_remote_state.source.outputs.replication_role_arn)
+  # and re-apply.
+  source_replication_role_arn = null
   source_account_id           = var.source_account_id
   alarm_threshold_seconds     = 900
 

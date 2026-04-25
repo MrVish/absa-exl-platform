@@ -79,3 +79,51 @@ run "bucket_policy_grants_source_replication_role" {
     error_message = "Bucket policy must grant the source replication role"
   }
 }
+
+run "null_source_role_omits_kms_grant_in_policy" {
+  command = plan
+
+  variables {
+    source_replication_role_arn = null
+  }
+
+  assert {
+    condition = !strcontains(
+      aws_kms_key.this.policy,
+      "AllowSourceReplicationRoleEncrypt",
+    )
+    error_message = "When source_replication_role_arn is null, KMS key policy must NOT contain the AllowSourceReplicationRoleEncrypt statement"
+  }
+
+  assert {
+    condition = !strcontains(
+      aws_s3_bucket_policy.this.policy,
+      "AllowSourceReplicationRoleWrite",
+    )
+    error_message = "When source_replication_role_arn is null, bucket policy must NOT contain the AllowSourceReplicationRoleWrite statement"
+  }
+}
+
+run "non_null_source_role_includes_kms_and_bucket_grants" {
+  command = plan
+
+  variables {
+    source_replication_role_arn = "arn:aws:iam::111111111111:role/dev-s3-replication-role"
+  }
+
+  assert {
+    condition = strcontains(
+      aws_kms_key.this.policy,
+      "AllowSourceReplicationRoleEncrypt",
+    )
+    error_message = "When source_replication_role_arn is set, KMS key policy MUST contain the source-role grant"
+  }
+
+  assert {
+    condition = strcontains(
+      aws_s3_bucket_policy.this.policy,
+      "AllowSourceReplicationRoleWrite",
+    )
+    error_message = "When source_replication_role_arn is set, bucket policy MUST contain the source-role write statement"
+  }
+}

@@ -25,8 +25,10 @@ variable "retention_years" {
 }
 
 variable "source_replication_role_arn" {
-  description = "ARN of the source-side replication role. Granted permission to write into this bucket and use this KMS key."
+  description = "ARN of the source-side replication role. Pass null on first destination apply (before the source side has applied) — KMS key policy and bucket policy will omit source-role grants in that case. Pass the real ARN on the second destination apply once the source role exists."
   type        = string
+  default     = null
+  nullable    = true
 }
 
 variable "source_account_id" {

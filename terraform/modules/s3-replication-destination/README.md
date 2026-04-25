@@ -25,14 +25,24 @@ module "replication_destination" {
 
 ## Apply order
 
-This module applies before the source-side module exists. On the first apply (Phase 1 of the bootstrap in [`terraform/shared/replication-contract.md`](../../shared/replication-contract.md)):
+This module supports a two-phase bootstrap because AWS validates IAM principals in KMS key policies at PUT time — passing a non-existent source role ARN would fail with `MalformedPolicyDocumentException`. The fix: `var.source_replication_role_arn` is nullable. When null, the module omits the source-role statements from both the KMS key policy and the bucket policy.
 
-1. Pass any plausible-looking ARN as `var.source_replication_role_arn` — for example, `arn:aws:iam::<source_account_id>:role/placeholder-replication-role`. The bucket itself, KMS CMK, alarms, and SNS topic will provision successfully.
-2. **Known gap (Phase 2 fix):** AWS KMS validates IAM principals in key policies at PUT time. If the placeholder role ARN does not exist when the destination first applies, the `AllowSourceReplicationRoleEncrypt` KMS key policy statement will be rejected with `MalformedPolicyDocumentException`.
-3. **Workaround for Phase 1 plan-validate:** plan-validate testing does not invoke the AWS API, so this gap surfaces only at apply time. Phase 1's deliverable is the module + tests; Phase 2 will refactor `source_replication_role_arn` to be optional (`default = null`) and conditionally include the KMS statement so the bootstrap is genuinely two-phase-applicable. For now, document this constraint and defer the apply-time work.
-4. After the source side has applied (Phase 2 of bootstrap), pass the real `var.source_replication_role_arn` and re-apply. The KMS key policy and bucket policy will both be updated to grant the actual source role.
+**Phase 1 (first destination apply, source role does not exist yet):**
+- Caller passes `source_replication_role_arn = null`.
+- KMS key, bucket, alarms, SNS topic all provision.
+- KMS key policy contains only the `AllowAccountRoot` statement.
+- Bucket policy contains only the `AllowSourceAccountReadBucketVersioning` statement.
 
-The bucket policy half of this is not affected — S3 accepts unknown principal ARNs in bucket policies and resolves them lazily. Only the KMS key policy validation is the apply-time blocker.
+**Phase 2 (source side applies):**
+- Source side provisions the replication role + bucket + KMS key + replication configuration.
+- Source side outputs `replication_role_arn`.
+
+**Phase 3 (destination re-apply with the real source role ARN):**
+- Caller passes `source_replication_role_arn = module.replication_source.replication_role_arn` (or via terraform_remote_state).
+- KMS key policy is updated to add `AllowSourceReplicationRoleEncrypt`.
+- Bucket policy is updated to add `AllowSourceReplicationRoleWrite`.
+
+After Phase 3, ongoing changes to either side can apply in any order; the dependency direction is symmetric once both sides exist.
 
 ## Inputs
 
