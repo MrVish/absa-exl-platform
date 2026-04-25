@@ -76,3 +76,12 @@ run "env_validation_rejects_unknown_value" {
     var.env,
   ]
 }
+
+run "manifest_signing_key_arn_is_null" {
+  command = plan
+
+  assert {
+    condition     = output.manifest_signing_key_arn == null
+    error_message = "manifest_signing_key_arn must return null until Phase 2 implements ADR-0003"
+  }
+}

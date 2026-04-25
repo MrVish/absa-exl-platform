@@ -21,6 +21,7 @@ resource "aws_kms_key" "cloudtrail_bucket" {
         Action = [
           "kms:GenerateDataKey",
           "kms:Decrypt",
+          "kms:DescribeKey",
         ]
         Resource = "*"
         Condition = {
@@ -61,10 +62,10 @@ resource "aws_kms_key" "flow_logs_cw" {
         Effect    = "Allow"
         Principal = { Service = "logs.${data.aws_region.current.name}.amazonaws.com" }
         Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
+          "kms:Encrypt*",
+          "kms:Decrypt*",
           "kms:ReEncrypt*",
-          "kms:GenerateDataKey",
+          "kms:GenerateDataKey*",
           "kms:Describe*",
         ]
         Resource = "*"
