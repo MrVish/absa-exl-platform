@@ -17,6 +17,11 @@ variable "retention_years" {
   description = "Default object-lock retention in years. 7 prod default; shorter overrides for dev / stg."
   type        = number
   default     = 7
+
+  validation {
+    condition     = var.retention_years >= 1 && var.retention_years <= 100
+    error_message = "retention_years must be between 1 and 100."
+  }
 }
 
 variable "source_replication_role_arn" {

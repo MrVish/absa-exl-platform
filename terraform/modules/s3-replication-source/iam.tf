@@ -48,6 +48,7 @@ resource "aws_iam_policy" "replication" {
           "s3:ReplicateObject",
           "s3:ReplicateDelete",
           "s3:ReplicateTags",
+          "s3:ObjectOwnerOverrideToBucketOwner",
         ]
         Resource = "${var.destination_bucket_arn}/*"
       },
