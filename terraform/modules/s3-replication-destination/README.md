@@ -47,7 +47,7 @@ After Phase 3, ongoing changes to either side can apply in any order; the depend
 
 ## Inputs
 
-See `variables.tf`. Required: `bucket_name`, `env`, `source_replication_role_arn`, `source_account_id`, `tags`.
+See `variables.tf`. Required: `bucket_name`, `env`, `source_account_id`, `tags`. Optional / nullable: `source_replication_role_arn` (default null — see Apply order section).
 
 ## Outputs
 

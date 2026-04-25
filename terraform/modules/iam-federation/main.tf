@@ -17,5 +17,3 @@ locals {
     "repo:${var.github_org_slash_repo}:ref:refs/heads/${branch}"
   ]
 }
-
-data "aws_caller_identity" "current" {}

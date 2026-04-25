@@ -11,7 +11,6 @@ module "landing_zone" {
   source = "../../modules/landing-zone"
 
   env                = "dev"
-  region             = "af-south-1"
   vpc_cidr           = "10.40.0.0/20"
   availability_zones = 3
   transit_gateway_id = "tgw-0123456789abcdef0"
@@ -46,7 +45,7 @@ The module creates an env-scoped permissions boundary policy at `arn:aws:iam::<a
 
 ## Inputs
 
-See `variables.tf` for the authoritative list and validation rules. Required inputs without defaults: `env`, `region`, `vpc_cidr`, `transit_gateway_id`, `tags`.
+See `variables.tf` for the authoritative list and validation rules. Required inputs without defaults: `env`, `vpc_cidr`, `transit_gateway_id`, `tags`.
 
 ## Outputs
 

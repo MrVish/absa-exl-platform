@@ -14,3 +14,6 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_kms_alias" "flow_logs_cw" {
+  name = "alias/${var.env}-flow-logs-cw"
+}

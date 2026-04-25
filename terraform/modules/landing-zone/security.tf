@@ -1,9 +1,11 @@
-# TODO(Phase 1 sprint 2): set kms_key_id = module.kms_hierarchy.flow_logs_key_arn
-# once the kms-hierarchy module is built. tfsec aws-cloudwatch-log-group-customer-key
-# (HIGH) and checkov CKV_AWS_158 are expected failures until then.
+# Phase 1 sprint 2: SSE-KMS via kms-hierarchy.flow_logs_cw_key. The key
+# is looked up by its alias to avoid cross-stack remote-state plumbing.
+# Apply order: terraform/account-bootstrap/exl-{env}/ must apply before
+# this destination stack so the alias exists.
 resource "aws_cloudwatch_log_group" "flow_logs" {
   name              = "/aws/vpc/flow-logs/${local.name_prefix}"
   retention_in_days = var.flow_logs_retention_days
+  kms_key_id        = data.aws_kms_alias.flow_logs_cw.target_key_arn
 
   tags = local.common_tags
 }
