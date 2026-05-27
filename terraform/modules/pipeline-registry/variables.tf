@@ -7,11 +7,6 @@ variable "env" {
   }
 }
 
-variable "region" {
-  type        = string
-  description = "AWS region where the registry is deployed (e.g. eu-west-1). Used for constructing KMS key policy ARNs."
-}
-
 variable "table_name" {
   type        = string
   description = "Name of the DynamoDB table that stores model registry records."
@@ -43,6 +38,10 @@ variable "enable_deletion_protection" {
 
 variable "tags" {
   type        = map(string)
-  description = "Additional resource tags merged with module defaults."
-  default     = {}
+  description = "Tags to apply to every resource. Must include cost_center."
+
+  validation {
+    condition     = contains(keys(var.tags), "cost_center")
+    error_message = "tags must include cost_center."
+  }
 }

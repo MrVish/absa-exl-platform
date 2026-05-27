@@ -3,10 +3,50 @@ locals {
   tags = merge(var.tags, { env = var.env, module = "pipeline-registry", cost_center = "model-hosting" })
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_iam_policy_document" "kms" {
+  statement {
+    sid    = "AllowAccountRoot"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudWatchLogsEncryptDecrypt"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logs.${data.aws_region.current.name}.amazonaws.com"]
+    }
+    actions = [
+      "kms:Encrypt*",
+      "kms:Decrypt*",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:Describe*",
+    ]
+    resources = ["*"]
+    condition {
+      test     = "ArnLike"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+      values   = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+    }
+  }
+}
+
 resource "aws_kms_key" "this" {
-  description             = "${local.name} registry data + logs CMK (${var.region})"
+  description             = "${local.name} registry data + logs CMK"
   enable_key_rotation     = true
   deletion_window_in_days = 30
+  policy                  = data.aws_iam_policy_document.kms.json
   tags                    = local.tags
 }
 
@@ -86,7 +126,9 @@ data "aws_iam_policy_document" "lambda" {
     effect = "Allow"
     actions = [
       "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem",
-      "dynamodb:Query", "dynamodb:Scan",
+      "dynamodb:Query",
+      # dynamodb:Scan powers GET /models (no filter) at 10-model scale; revisit if the table grows.
+      "dynamodb:Scan",
     ]
     resources = [aws_dynamodb_table.this.arn, "${aws_dynamodb_table.this.arn}/index/*"]
   }

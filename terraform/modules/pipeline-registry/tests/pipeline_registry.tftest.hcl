@@ -4,12 +4,36 @@ mock_provider "aws" {
       json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
     }
   }
+  mock_resource "aws_kms_key" {
+    defaults = {
+      arn                 = "arn:aws:kms:eu-west-1:123456789012:key/mock-key-id"
+      key_id              = "mock-key-id"
+      enable_key_rotation = true
+    }
+  }
+  mock_resource "aws_cloudwatch_log_group" {
+    defaults = {
+      arn        = "arn:aws:logs:eu-west-1:123456789012:log-group:mock-lg"
+      kms_key_id = "arn:aws:kms:eu-west-1:123456789012:key/mock-key-id"
+    }
+  }
+  mock_resource "aws_iam_role" {
+    defaults = {
+      arn = "arn:aws:iam::123456789012:role/mock-role"
+    }
+  }
+  mock_resource "aws_apigatewayv2_api" {
+    defaults = {
+      execution_arn = "arn:aws:execute-api:eu-west-1:123456789012:mock-api-id"
+      api_endpoint  = "https://mock-api-id.execute-api.eu-west-1.amazonaws.com"
+    }
+  }
 }
 
 variables {
   env               = "dev"
-  region            = "eu-west-1"
   lambda_source_dir = "../../../registry/api/src"
+  tags              = { cost_center = "model-hosting" }
 }
 
 run "defaults_validate" {
@@ -50,6 +74,33 @@ run "defaults_validate" {
   assert {
     condition     = aws_apigatewayv2_route.default.authorization_type == "AWS_IAM"
     error_message = "route auth must be AWS_IAM"
+  }
+  assert {
+    condition     = aws_kms_key.this.enable_key_rotation == true
+    error_message = "KMS key rotation must be enabled"
+  }
+  assert {
+    condition     = aws_cloudwatch_log_group.lambda.retention_in_days == 365
+    error_message = "Lambda log group retention must be 365 days"
+  }
+  assert {
+    condition     = aws_iam_policy.reader.name == "dev-registry-reader"
+    error_message = "reader policy name must be dev-registry-reader"
+  }
+  assert {
+    condition     = aws_iam_policy.writer.name == "dev-registry-writer"
+    error_message = "writer policy name must be dev-registry-writer"
+  }
+}
+
+# kms_key_id is a cross-resource computed attribute; it can only be
+# verified after apply. Uses mock_provider so no real AWS calls are made.
+run "kms_log_group_wiring" {
+  command = apply
+
+  assert {
+    condition     = aws_cloudwatch_log_group.lambda.kms_key_id != null && aws_cloudwatch_log_group.lambda.kms_key_id != ""
+    error_message = "Lambda log group must be encrypted with the module CMK"
   }
 }
 
