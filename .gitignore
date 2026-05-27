@@ -12,6 +12,7 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+**/.build/
 
 # Editors
 .vscode/
@@ -27,3 +28,13 @@ terraform.rc
 *.pem
 *.key
 secrets/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/

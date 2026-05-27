@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.absa-exl.internal/manifest-envelope/v1.json",
+  "title": "ManifestEnvelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "digest", "digest_algorithm", "signature", "signing_key_arn",
+    "signing_algorithm", "subject_type", "subject_ref", "signed_at",
+    "signer_principal", "payload"
+  ],
+  "properties": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "digest_algorithm": { "type": "string", "const": "SHA-256" },
+    "signature": { "type": "string", "minLength": 1 },
+    "signing_key_arn": { "type": "string", "pattern": "^arn:aws:kms:" },
+    "signing_algorithm": {
+      "type": "string",
+      "enum": ["RSASSA_PKCS1_V1_5_SHA_256", "ECDSA_SHA_384"]
+    },
+    "subject_type": { "type": "string", "enum": ["package", "pipeline"] },
+    "subject_ref": { "type": "string", "minLength": 1 },
+    "signed_at": { "type": "string", "format": "date-time" },
+    "signer_principal": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" }
+  }
+}

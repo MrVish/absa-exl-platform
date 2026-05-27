@@ -27,6 +27,7 @@ terraform/                   Infrastructure as code
 ├── envs/{dev,stg,prod}/     Per-env stacks calling the modules
 ├── account-bootstrap/       Account-singleton resources (CloudTrail, GuardDuty)
 └── shared/                  Cross-stack contracts and shared variables
+platform-contracts/          Shared JSON-Schema contracts + generated Pydantic models (Phase 2)
 pipeline-factory/            Pipeline generator CLI (Phase 2)
 code-intake/                 Validators and signing for the productized handoff (Phase 2)
 pir-engine/                  Post-implementation review reconciliation (Phase 4)
@@ -42,4 +43,4 @@ Control matrix: [`docs/compliance/control-matrix.md`](docs/compliance/control-ma
 
 ## Status
 
-Phase 1 foundation kickoff in progress. See [`docs/superpowers/plans/2026-04-25-absa-exl-phase-1-foundation.md`](docs/superpowers/plans/2026-04-25-absa-exl-phase-1-foundation.md).
+Phase 1 foundation complete (kickoff + sprint 2). Phase 2 sprint 1 (Registry & shared contracts) in progress. See [`docs/superpowers/plans/2026-05-26-absa-exl-phase-2-sprint-1-registry.md`](docs/superpowers/plans/2026-05-26-absa-exl-phase-2-sprint-1-registry.md).

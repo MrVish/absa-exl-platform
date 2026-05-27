@@ -6,3 +6,5 @@ docs/architecture.md               @platform-leads @engagement-lead
 docs/compliance/                   @compliance-leads @platform-leads
 ci/                                @platform-leads
 .github/workflows/                 @platform-leads
+platform-contracts/                @platform-leads
+registry/                          @platform-leads
