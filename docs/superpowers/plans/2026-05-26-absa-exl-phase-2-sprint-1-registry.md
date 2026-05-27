@@ -49,7 +49,7 @@ Expected: FAIL — `uv` errors that no project/workspace is configured, or `Modu
 
 ```toml
 [tool.uv.workspace]
-members = ["platform-contracts", "registry/api"]
+members = ["platform-contracts"]  # registry/api is added in Task 6, once that member exists
 
 [dependency-groups]
 dev = [
@@ -82,7 +82,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q"
-testpaths = ["platform-contracts/tests", "registry/api/tests"]
+testpaths = ["platform-contracts/tests"]  # registry/api/tests is added in Task 6
 ```
 
 - [ ] **Step 4: Create `.python-version`**
@@ -637,8 +637,12 @@ platform-contracts = { workspace = true }
 """ABSA x EXL Model & Pipeline Registry API."""
 ```
 
+Then register the new member in the root `pyproject.toml`:
+- add `"registry/api"` to `[tool.uv.workspace]` `members`
+- add `"registry/api/tests"` to `[tool.pytest.ini_options]` `testpaths`
+
 Run: `uv sync`
-Expected: `registry-api` resolves; `uv.lock` updates.
+Expected: `registry-api` resolves as a workspace member; `uv.lock` updates.
 
 - [ ] **Step 2: Write the failing repository test**
 
