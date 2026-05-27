@@ -36,7 +36,7 @@ class RegistryRepository:
                     f"{record['model_name']}@{record['version']} already exists"
                 ) from exc
             raise
-        return record
+        return dict(record)
 
     def get(self, model_name: str, version: str) -> dict[str, Any]:
         response = self._table.get_item(Key={"model_name": model_name, "version": version})
@@ -57,6 +57,7 @@ class RegistryRepository:
         return list(resp.get("Items", []))
 
     def scan_all(self) -> list[dict[str, Any]]:
+        # Single-page scan; adequate for the <=~100 records at current platform scale.
         resp = self._table.scan()
         return list(resp.get("Items", []))
 
@@ -67,6 +68,8 @@ class RegistryRepository:
         changes: dict[str, Any],
         expected_rev: int,
     ) -> dict[str, Any]:
+        if not changes:
+            raise ValueError("update requires at least one field to change")
         names: dict[str, str] = {"#rev": "rev"}
         values: dict[str, Any] = {":new_rev": expected_rev + 1, ":exp_rev": expected_rev}
         set_parts = ["#rev = :new_rev"]

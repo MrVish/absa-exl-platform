@@ -47,6 +47,13 @@ def test_update_optimistic_lock(dynamo_table: str) -> None:
         repo.update("credit-risk-pd", "1.0.0", {"sla_seconds": 10}, expected_rev=0)
 
 
+def test_update_rejects_empty_changes(dynamo_table: str) -> None:
+    repo = _repo(dynamo_table)
+    repo.create(make_record())
+    with pytest.raises(ValueError):
+        repo.update("credit-risk-pd", "1.0.0", {}, expected_rev=0)
+
+
 def test_list_versions_and_by_status(dynamo_table: str) -> None:
     repo = _repo(dynamo_table)
     repo.create(make_record())
