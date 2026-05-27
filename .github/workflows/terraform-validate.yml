@@ -8,10 +8,12 @@ on:
     branches:
       - main
       - "phase-1/**"
+      - "phase-2/**"
   push:
     branches:
       - main
       - "phase-1/**"
+      - "phase-2/**"
 
 permissions:
   contents: read
@@ -42,6 +44,7 @@ jobs:
           - s3-replication-destination
           - kms-hierarchy
           - iam-federation
+          - pipeline-registry
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -78,6 +81,9 @@ jobs:
           - terraform/envs/stg/destination
           - terraform/envs/prod/source
           - terraform/envs/prod/destination
+          - terraform/envs/dev/registry
+          - terraform/envs/stg/registry
+          - terraform/envs/prod/registry
           - terraform/account-bootstrap/exl-dev
           - terraform/account-bootstrap/exl-stg
           - terraform/account-bootstrap/exl-prod
