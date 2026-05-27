@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.absa-exl.internal/model-config/v1.json",
+  "title": "ModelConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model_name", "version", "execution_tier", "schedule_cadence",
+    "input_schema_ref", "output_schema_ref", "pir_doc_ref",
+    "owner_email", "accountable_executive", "sla_seconds"
+  ],
+  "properties": {
+    "model_name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "execution_tier": { "type": "string", "enum": ["standard", "scalable"] },
+    "schedule_cadence": { "type": "string", "minLength": 1 },
+    "input_schema_ref": { "type": "string", "pattern": "^s3://" },
+    "output_schema_ref": { "type": "string", "pattern": "^s3://" },
+    "pir_doc_ref": { "type": "string", "pattern": "^s3://" },
+    "owner_email": { "type": "string", "format": "email" },
+    "accountable_executive": { "type": "string", "minLength": 1 },
+    "sla_seconds": { "type": "integer", "exclusiveMinimum": 0 },
+    "model_class": { "type": "string", "enum": ["credit", "fraud", "propensity", "other"] },
+    "registry_lookup_key": { "type": "string" }
+  }
+}
