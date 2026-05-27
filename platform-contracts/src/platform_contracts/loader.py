@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 from importlib.resources import files
+from importlib.resources.abc import Traversable
 from typing import Any, cast
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 
-def _schema_resource(name: str):  # type: ignore[no-untyped-def]
+def _schema_resource(name: str) -> Traversable:
     return files("platform_contracts") / "schemas" / f"{name}.schema.json"
 
 
@@ -19,5 +20,11 @@ def load_schema(name: str) -> dict[str, Any]:
 
 
 def validate(name: str, document: dict[str, Any]) -> None:
-    """Validate a document against a named schema. Raises jsonschema.ValidationError."""
+    """Validate a document against a named schema.
+
+    Raises:
+        KeyError: if *name* does not correspond to a known schema
+            (propagated from :func:`load_schema`).
+        jsonschema.ValidationError: if the document fails schema validation.
+    """
     Draft202012Validator(load_schema(name), format_checker=FormatChecker()).validate(document)
