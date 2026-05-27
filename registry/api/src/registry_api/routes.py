@@ -11,6 +11,7 @@ from .api_models import CreateModelRequest, UpdateModelRequest
 from .audit import emit_audit
 from .repository import RegistryRepository
 from .settings import get_settings
+from .transitions import assert_approval_preconditions, assert_transition_allowed
 
 router = APIRouter()
 
@@ -114,3 +115,52 @@ def update_model(
         rev=updated["rev"],
     )
     return updated
+
+
+def _transition(
+    model_name: str,
+    version: str,
+    target: str,
+    request: Request,
+    repo: RegistryRepository,
+) -> dict[str, Any]:
+    current = repo.get(model_name, version)
+    assert_transition_allowed(current["approval_status"], target)
+    if target == "approved":
+        assert_approval_preconditions(current)
+    updated = repo.update(
+        model_name,
+        version,
+        {"approval_status": target, "updated_at": _now()},
+        expected_rev=current["rev"],
+    )
+    emit_audit(
+        principal=_principal(request),
+        action=target,
+        model_name=model_name,
+        version=version,
+        old_status=current["approval_status"],
+        new_status=target,
+        rev=updated["rev"],
+    )
+    return updated
+
+
+@router.post("/models/{model_name}/versions/{version}:approve")
+def approve_model(
+    model_name: str,
+    version: str,
+    request: Request,
+    repo: RegistryRepository = Depends(get_repository),  # noqa: B008
+) -> dict[str, Any]:
+    return _transition(model_name, version, "approved", request, repo)
+
+
+@router.post("/models/{model_name}/versions/{version}:retire")
+def retire_model(
+    model_name: str,
+    version: str,
+    request: Request,
+    repo: RegistryRepository = Depends(get_repository),  # noqa: B008
+) -> dict[str, Any]:
+    return _transition(model_name, version, "retired", request, repo)
