@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["platform-contracts"]  # registry/api is added in a later task, once that member exists
+members = ["platform-contracts", "registry/api"]
 
 [dependency-groups]
 dev = [
@@ -32,4 +32,4 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q"
-testpaths = ["platform-contracts/tests"]  # registry/api/tests is added in a later task
+testpaths = ["platform-contracts/tests", "registry/api/tests"]
