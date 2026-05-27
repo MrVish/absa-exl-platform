@@ -46,9 +46,8 @@ from pathlib import Path
 src_dir = Path(sys.argv[1])
 out_path = Path(sys.argv[2])
 
-# Process in deterministic order
-ordered = ["model-config", "registry-record", "manifest-envelope"]
-files = [src_dir / f"{name}.py" for name in ordered]
+# Process in deterministic (alphabetical) order derived from generated files
+files = sorted(src_dir.glob("*.py"))
 
 # Track what we've seen
 seen_class_names: set[str] = set()
@@ -73,6 +72,8 @@ for fpath in files:
                     seen_imports[module] = set()
                 for alias in node.names:
                     seen_imports[module].add(alias.name)
+        elif isinstance(node, ast.Import):
+            raise RuntimeError(f"Unexpected bare 'import' in {fpath}: {ast.dump(node)} — update the merger.")
         elif isinstance(node, ast.ClassDef):
             name = node.name
             if name in seen_class_names:

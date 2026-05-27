@@ -9,6 +9,29 @@ from typing import Annotated, Any, Literal
 from platform_contracts._base import ContractBase
 from pydantic import AwareDatetime, ConfigDict, EmailStr, Field
 
+class SigningAlgorithm(StrEnum):
+    RSASSA_PKCS1_V1_5_SHA_256 = 'RSASSA_PKCS1_V1_5_SHA_256'
+    ECDSA_SHA_384 = 'ECDSA_SHA_384'
+
+class SubjectType(StrEnum):
+    package = 'package'
+    pipeline = 'pipeline'
+
+class ManifestEnvelope(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    digest: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
+    digest_algorithm: Literal['SHA-256']
+    signature: Annotated[str, Field(min_length=1)]
+    signing_key_arn: Annotated[str, Field(pattern='^arn:aws:kms:')]
+    signing_algorithm: SigningAlgorithm
+    subject_type: SubjectType
+    subject_ref: Annotated[str, Field(min_length=1)]
+    signed_at: AwareDatetime
+    signer_principal: Annotated[str, Field(min_length=1)]
+    payload: dict[str, Any]
+
 class ExecutionTier(StrEnum):
     standard = 'standard'
     scalable = 'scalable'
@@ -64,26 +87,3 @@ class RegistryRecord(ContractBase):
     updated_at: AwareDatetime
     last_scored_at: AwareDatetime | None = None
     rev: Annotated[int, Field(ge=0)]
-
-class SigningAlgorithm(StrEnum):
-    RSASSA_PKCS1_V1_5_SHA_256 = 'RSASSA_PKCS1_V1_5_SHA_256'
-    ECDSA_SHA_384 = 'ECDSA_SHA_384'
-
-class SubjectType(StrEnum):
-    package = 'package'
-    pipeline = 'pipeline'
-
-class ManifestEnvelope(ContractBase):
-    model_config = ConfigDict(
-        extra='forbid',
-    )
-    digest: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
-    digest_algorithm: Literal['SHA-256']
-    signature: Annotated[str, Field(min_length=1)]
-    signing_key_arn: Annotated[str, Field(pattern='^arn:aws:kms:')]
-    signing_algorithm: SigningAlgorithm
-    subject_type: SubjectType
-    subject_ref: Annotated[str, Field(min_length=1)]
-    signed_at: AwareDatetime
-    signer_principal: Annotated[str, Field(min_length=1)]
-    payload: dict[str, Any]
