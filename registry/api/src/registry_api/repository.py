@@ -1,12 +1,24 @@
 from __future__ import annotations
 
-from typing import Any
+from decimal import Decimal
+from typing import Any, cast
 
 import boto3
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 _CONFLICT = "ConditionalCheckFailedException"
+
+
+def _native(value: Any) -> Any:
+    """Recursively convert DynamoDB Decimal values to native int/float."""
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    if isinstance(value, dict):
+        return {k: _native(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_native(v) for v in value]
+    return value
 
 
 class RecordNotFoundError(Exception):
@@ -43,23 +55,23 @@ class RegistryRepository:
         item: dict[str, Any] | None = response.get("Item")
         if item is None:
             raise RecordNotFoundError(f"{model_name}@{version} not found")
-        return item
+        return cast(dict[str, Any], _native(item))
 
     def list_versions(self, model_name: str) -> list[dict[str, Any]]:
         resp = self._table.query(KeyConditionExpression=Key("model_name").eq(model_name))
-        return list(resp.get("Items", []))
+        return [_native(i) for i in resp.get("Items", [])]
 
     def list_by_status(self, status: str) -> list[dict[str, Any]]:
         resp = self._table.query(
             IndexName="by_status",
             KeyConditionExpression=Key("approval_status").eq(status),
         )
-        return list(resp.get("Items", []))
+        return [_native(i) for i in resp.get("Items", [])]
 
     def scan_all(self) -> list[dict[str, Any]]:
         # Single-page scan; adequate for the <=~100 records at current platform scale.
         resp = self._table.scan()
-        return list(resp.get("Items", []))
+        return [_native(i) for i in resp.get("Items", [])]
 
     def update(
         self,
@@ -92,4 +104,4 @@ class RegistryRepository:
                     f"rev mismatch or missing record for {model_name}@{version}"
                 ) from exc
             raise
-        return dict(resp["Attributes"])
+        return cast(dict[str, Any], _native(dict(resp["Attributes"])))

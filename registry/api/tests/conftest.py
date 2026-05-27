@@ -2,6 +2,7 @@ from collections.abc import Iterator
 
 import boto3
 import pytest
+from fastapi.testclient import TestClient
 from moto import mock_aws
 
 TABLE_NAME = "model_pipeline_registry"
@@ -37,6 +38,36 @@ def dynamo_table() -> Iterator[str]:
             BillingMode="PAY_PER_REQUEST",
         )
         yield TABLE_NAME
+
+
+def make_create_body(**overrides: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "model_name": "credit-risk-pd",
+        "version": "1.0.0",
+        "sas_code_version": "sas-2026.04.1",
+        "inference_code_version": "py-2026.04.1",
+        "schedule_cadence": "cron(0 6 * * ? *)",
+        "execution_tier": "standard",
+        "input_schema_ref": "s3://absa-exl/in.json",
+        "output_schema_ref": "s3://absa-exl/out.json",
+        "pir_doc_ref": "s3://absa-exl/pir.json",
+        "owner_email": "owner@absa.africa",
+        "accountable_executive": "Jane Exec",
+        "sla_seconds": 3600,
+    }
+    body.update(overrides)
+    return body
+
+
+@pytest.fixture
+def client(dynamo_table: str):  # type: ignore[no-untyped-def]
+    from registry_api.app import create_app
+    from registry_api.repository import RegistryRepository
+    from registry_api.routes import get_repository
+
+    app = create_app()
+    app.dependency_overrides[get_repository] = lambda: RegistryRepository(dynamo_table, REGION)
+    return TestClient(app)
 
 
 def make_record(**overrides: object) -> dict[str, object]:
