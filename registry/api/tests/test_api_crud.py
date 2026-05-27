@@ -18,6 +18,7 @@ def test_create_duplicate_returns_409(client) -> None:  # type: ignore[no-untype
 def test_create_rejects_unknown_field_422(client) -> None:  # type: ignore[no-untyped-def]
     resp = client.post("/models", json=make_create_body(surprise="x"))
     assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "validation_error"
 
 
 def test_get_missing_returns_404(client) -> None:  # type: ignore[no-untyped-def]

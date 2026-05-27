@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 
@@ -37,6 +39,12 @@ def create_app() -> FastAPI:
     @app.exception_handler(ApprovalPreconditionError)
     def _precondition(_: Request, exc: ApprovalPreconditionError) -> JSONResponse:
         return _error(422, "approval_preconditions", str(exc), {"missing": exc.missing})
+
+    @app.exception_handler(RequestValidationError)
+    def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        return _error(
+            422, "validation_error", "Request validation failed", jsonable_encoder(exc.errors())
+        )
 
     return app
 
