@@ -1,0 +1,35 @@
+[tool.uv.workspace]
+members = ["platform-contracts"]  # registry/api is added in a later task, once that member exists
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+    "ruff>=0.6",
+    "moto[dynamodb]>=5",
+    "datamodel-code-generator>=0.25",
+    "httpx>=0.27",
+    "types-jsonschema",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Generated from JSON Schema; excluded so the CI drift check (raw codegen output)
+# stays byte-stable and ruff never reformats it.
+extend-exclude = ["platform-contracts/src/platform_contracts/models.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["moto.*", "mangum.*", "boto3.*", "botocore.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["platform-contracts/tests"]  # registry/api/tests is added in a later task

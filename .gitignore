@@ -27,3 +27,11 @@ terraform.rc
 *.pem
 *.key
 secrets/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
