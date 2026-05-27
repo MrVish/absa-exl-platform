@@ -26,12 +26,22 @@
 | **SOC 2 CC6.1 — logical access** | IAM permissions boundaries on EXL workload roles enforce env-tag-based deny conditions | `terraform/modules/landing-zone/iam.tf` | EXL Platform Engineering |
 | **ABSA GMRMG — model lifecycle traceability** | Per-env source buckets give per-env scoring-run lineage from the moment data leaves ABSA | `terraform/modules/s3-replication-source/main.tf` (called per env) | ABSA Model Risk |
 
+## Phase 2 controls (sprint 1 — Registry)
+
+| Control | Implementation | Evidence artifact | Owner |
+| --- | --- | --- | --- |
+| **SARB GOI 3 — model risk governance** | Registry approval gate: `approval_status` cannot reach `approved` without `cab_record_id` + `ivu_evidence_ref` | `registry/api/src/registry_api/transitions.py`, `docs/adr/0007-registry-data-model-and-api.md` | ABSA Model Risk |
+| **SR 11-7 III.4 — model implementation evidence** | Structured audit log (principal / action / old->new / rev) per mutation + CloudTrail on API GW, Lambda, DynamoDB | `registry/api/src/registry_api/audit.py`, `terraform/modules/pipeline-registry/main.tf` | EXL Platform Engineering |
+| **ISO 27001 A.10.1 — cryptographic controls** | Module-owned CMK (rotation enabled) for DynamoDB SSE + log groups | `terraform/modules/pipeline-registry/main.tf` (aws_kms_key.this) | EXL Platform Engineering |
+| **ISO 27001 A.9 / SOC 2 CC6.1 — logical access** | API Gateway `AWS_IAM` (SigV4) auth; reader/writer caller policies scope `execute-api:Invoke` by HTTP method | `terraform/modules/pipeline-registry/main.tf` (route auth + reader/writer policies) | EXL Platform Engineering |
+| **SOC 2 CC6.1 — recoverability of evidence** | DynamoDB PITR on the registry table | `terraform/modules/pipeline-registry/main.tf` (point_in_time_recovery) | EXL Platform Engineering |
+| **ABSA GMRMG — model inventory + ownership** | Authoritative registry record with owner, accountable executive, SLA per model version | `platform-contracts/src/platform_contracts/schemas/registry-record.schema.json` | ABSA Model Risk |
+
 ## Out-of-matrix items (deferred)
 
 The following control rows belong to later phases and will be added to this matrix when the corresponding modules land:
 
 - **POPIA s8 — quality of personal information**: Phase 2 (Code Intake validators).
-- **SARB GOI 3 — model risk governance**: Phase 2 (Registry approval gate + CAB record linkage).
 - **SR 11-7 III.6 — independent review**: Phase 4 (PIR Engine variance gates).
 - **SOC 2 CC7.2 — system monitoring**: Phase 4 (Observability module + dashboards).
 - **ABSA GMRMG — IVU evidence pack**: Phase 4 (Audit hub + DR runbooks).
