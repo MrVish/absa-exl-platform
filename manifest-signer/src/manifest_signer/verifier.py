@@ -48,9 +48,7 @@ def verify_offline(envelope: dict[str, Any], *, public_key_pem: bytes) -> None:
     message = _payload_message(envelope)
     public_key = serialization.load_pem_public_key(public_key_pem)
     if not isinstance(public_key, RSAPublicKey):
-        raise VerificationError(
-            f"expected RSA public key, got {type(public_key).__name__}"
-        )
+        raise VerificationError(f"expected RSA public key, got {type(public_key).__name__}")
     try:
         public_key.verify(
             base64.b64decode(envelope["signature"]),

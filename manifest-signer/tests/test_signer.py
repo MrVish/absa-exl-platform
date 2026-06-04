@@ -22,9 +22,7 @@ def test_sign_unsigned_fills_all_four_sentinel_fields(
     assert out["signer_principal"] == signer_principal
 
 
-def test_sign_does_not_mutate_input(
-    unsigned_envelope, kms_client, signing_key, signer_principal
-):
+def test_sign_does_not_mutate_input(unsigned_envelope, kms_client, signing_key, signer_principal):
     snapshot = dict(unsigned_envelope)
     sign_envelope(
         unsigned_envelope,
@@ -78,11 +76,9 @@ def test_signed_at_defaults_to_iso8601_utc(
     assert parsed.utcoffset() is not None
 
 
-def test_signing_is_deterministic(
-    unsigned_envelope, kms_client, signing_key, signer_principal
-):
+def test_signing_is_deterministic(unsigned_envelope, kms_client, signing_key, signer_principal):
     """RSASSA_PKCS1_V1_5_SHA_256 is deterministic — same digest -> same signature.
-       This is the property the CI idempotency story leans on."""
+    This is the property the CI idempotency story leans on."""
     a = sign_envelope(
         unsigned_envelope,
         key_arn=signing_key["Arn"],
@@ -100,9 +96,7 @@ def test_signing_is_deterministic(
     assert a == b
 
 
-def test_resign_with_same_key_is_noop(
-    unsigned_envelope, kms_client, signing_key, signer_principal
-):
+def test_resign_with_same_key_is_noop(unsigned_envelope, kms_client, signing_key, signer_principal):
     signed = sign_envelope(
         unsigned_envelope,
         key_arn=signing_key["Arn"],
@@ -133,9 +127,7 @@ def test_resign_with_different_key_raises_key_mismatch(
         kms_client=kms_client,
         signer_principal=signer_principal,
     )
-    other_key = kms_client.create_key(KeyUsage="SIGN_VERIFY", KeySpec="RSA_3072")[
-        "KeyMetadata"
-    ]
+    other_key = kms_client.create_key(KeyUsage="SIGN_VERIFY", KeySpec="RSA_3072")["KeyMetadata"]
     with pytest.raises(KeyMismatchError):
         sign_envelope(
             signed,
@@ -149,10 +141,8 @@ def test_signing_key_arn_is_resolved_arn_not_alias(
     unsigned_envelope, kms_client, signing_key, signer_principal
 ):
     """If caller passes the alias, the envelope must end up with the resolved
-       key ARN — the immutable identifier. This is the audit-trail requirement."""
-    kms_client.create_alias(
-        AliasName="alias/test-signing-key", TargetKeyId=signing_key["KeyId"]
-    )
+    key ARN — the immutable identifier. This is the audit-trail requirement."""
+    kms_client.create_alias(AliasName="alias/test-signing-key", TargetKeyId=signing_key["KeyId"])
     out = sign_envelope(
         unsigned_envelope,
         key_arn="alias/test-signing-key",

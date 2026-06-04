@@ -27,16 +27,16 @@ def publish_public_key(
     version: str = "v1",
 ) -> str:
     """Fetches the CMK's public key via kms:GetPublicKey, PEM-encodes it,
-       uploads to s3://<bucket>/manifest-signing/<key_id>/<version>.pem.
-       Returns the s3:// URI.
+    uploads to s3://<bucket>/manifest-signing/<key_id>/<version>.pem.
+    Returns the s3:// URI.
 
-       Idempotent — the public key for a given CMK is immutable, so re-runs
-       upload identical content. We do not use IfNoneMatch here because the
-       expected case is "republish on rotation" where overwrite is acceptable;
-       overwrite of the same content is a no-op at the audit layer."""
+    Idempotent — the public key for a given CMK is immutable, so re-runs
+    upload identical content. We do not use IfNoneMatch here because the
+    expected case is "republish on rotation" where overwrite is acceptable;
+    overwrite of the same content is a no-op at the audit layer."""
     resp = kms_client.get_public_key(KeyId=key_arn)
     der_bytes = resp["PublicKey"]
-    key_id = resp["KeyId"].rsplit("/", 1)[-1]   # extract UUID suffix from full ARN
+    key_id = resp["KeyId"].rsplit("/", 1)[-1]  # extract UUID suffix from full ARN
 
     pub = serialization.load_der_public_key(der_bytes)
     pem_bytes = pub.public_bytes(

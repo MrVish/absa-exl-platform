@@ -30,7 +30,7 @@ def test_canonical_json_form_is_pretty_printed_sort_keys_utf8(sample_payload):
 
 def test_pipeline_factory_envelope_uses_canonical_json_for_digest(sample_payload):
     """build_envelope sets envelope.digest = sha256(canonical_json(payload)).
-       If either side drifts, signatures stop verifying."""
+    If either side drifts, signatures stop verifying."""
     import hashlib
 
     envelope = build_envelope(

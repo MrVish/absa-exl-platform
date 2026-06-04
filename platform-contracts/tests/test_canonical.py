@@ -29,6 +29,7 @@ def test_canonical_json_is_byte_identical_to_legacy_implementation():
     # Mirror the exact form pipeline_factory.hashing.canonical_json produced
     # before this refactor. Any change here breaks Sprint 2's existing manifests.
     import json
+
     payload = {
         "schema_version": 1,
         "generator_version": "0.1.0",

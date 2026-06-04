@@ -26,48 +26,77 @@ def test_sign_dry_run_does_not_call_kms(runner, unsigned_envelope, tmp_path):
     manifest.write_text(json.dumps(unsigned_envelope, indent=2) + "\n")
     # No KMS mock -- if --dry-run actually called KMS, this would fail with
     # a connection error.
-    result = runner.invoke(main, [
-        "sign", "--manifest", str(manifest),
-        "--key-arn", "arn:aws:kms:eu-west-1:111:key/abc",
-        "--signer-principal", "test-principal",
-        "--dry-run",
-    ])
+    result = runner.invoke(
+        main,
+        [
+            "sign",
+            "--manifest",
+            str(manifest),
+            "--key-arn",
+            "arn:aws:kms:eu-west-1:111:key/abc",
+            "--signer-principal",
+            "test-principal",
+            "--dry-run",
+        ],
+    )
     assert result.exit_code == 0, result.output
     # Local file is unchanged
     assert json.loads(manifest.read_text())["signature"] == "UNSIGNED"
 
 
 def test_sign_in_place_overwrites_file(
-    runner, unsigned_envelope, signing_key, kms_client, tmp_path,
+    runner,
+    unsigned_envelope,
+    signing_key,
+    kms_client,
+    tmp_path,
 ):
     """Full sign with --in-place modifies the file on disk."""
     manifest = tmp_path / "manifest.json"
     manifest.write_text(json.dumps(unsigned_envelope, indent=2) + "\n")
-    result = runner.invoke(main, [
-        "sign", "--manifest", str(manifest),
-        "--key-arn", signing_key["Arn"],
-        "--signer-principal", "test-principal",
-        "--in-place",
-    ])
+    result = runner.invoke(
+        main,
+        [
+            "sign",
+            "--manifest",
+            str(manifest),
+            "--key-arn",
+            signing_key["Arn"],
+            "--signer-principal",
+            "test-principal",
+            "--in-place",
+        ],
+    )
     assert result.exit_code == 0, result.output
     assert json.loads(manifest.read_text())["signature"] != "UNSIGNED"
 
 
 def test_sign_all_signs_unsigned_uploads_skips_existing(
-    runner, pipelines_tree, signing_key, kms_client, s3_client,
+    runner,
+    pipelines_tree,
+    signing_key,
+    kms_client,
+    s3_client,
 ):
     bucket = "test-signed-manifests"
     s3_client.create_bucket(
         Bucket=bucket,
         CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
     )
-    result = runner.invoke(main, [
-        "sign-all",
-        "--root", str(pipelines_tree),
-        "--key-arn", signing_key["Arn"],
-        "--upload-to-bucket", bucket,
-        "--signer-principal", "test-principal",
-    ])
+    result = runner.invoke(
+        main,
+        [
+            "sign-all",
+            "--root",
+            str(pipelines_tree),
+            "--key-arn",
+            signing_key["Arn"],
+            "--upload-to-bucket",
+            bucket,
+            "--signer-principal",
+            "test-principal",
+        ],
+    )
     assert result.exit_code == 0, result.output
     # Both manifests uploaded
     objs = s3_client.list_objects_v2(Bucket=bucket)
@@ -77,7 +106,11 @@ def test_sign_all_signs_unsigned_uploads_skips_existing(
 
 
 def test_sign_all_second_run_is_idempotent(
-    runner, pipelines_tree, signing_key, kms_client, s3_client,
+    runner,
+    pipelines_tree,
+    signing_key,
+    kms_client,
+    s3_client,
 ):
     bucket = "test-signed-manifests"
     s3_client.create_bucket(
@@ -85,8 +118,15 @@ def test_sign_all_second_run_is_idempotent(
         CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
     )
     args = [
-        "sign-all", "--root", str(pipelines_tree), "--key-arn", signing_key["Arn"],
-        "--upload-to-bucket", bucket, "--signer-principal", "test-principal",
+        "sign-all",
+        "--root",
+        str(pipelines_tree),
+        "--key-arn",
+        signing_key["Arn"],
+        "--upload-to-bucket",
+        bucket,
+        "--signer-principal",
+        "test-principal",
     ]
     r1 = runner.invoke(main, args)
     r2 = runner.invoke(main, args)
@@ -101,7 +141,11 @@ def test_sign_all_second_run_is_idempotent(
 
 
 def test_verify_online_exits_zero_on_valid(
-    runner, unsigned_envelope, signing_key, kms_client, tmp_path,
+    runner,
+    unsigned_envelope,
+    signing_key,
+    kms_client,
+    tmp_path,
 ):
     signed = sign_envelope(
         unsigned_envelope,
@@ -116,7 +160,11 @@ def test_verify_online_exits_zero_on_valid(
 
 
 def test_verify_offline_exits_zero_on_valid(
-    runner, unsigned_envelope, signing_key, kms_client, tmp_path,
+    runner,
+    unsigned_envelope,
+    signing_key,
+    kms_client,
+    tmp_path,
 ):
     signed = sign_envelope(
         unsigned_envelope,
@@ -136,9 +184,16 @@ def test_verify_offline_exits_zero_on_valid(
     pem_path = tmp_path / "pub.pem"
     pem_path.write_bytes(pem)
 
-    result = runner.invoke(main, [
-        "verify-offline", "--manifest", str(manifest), "--public-key", str(pem_path),
-    ])
+    result = runner.invoke(
+        main,
+        [
+            "verify-offline",
+            "--manifest",
+            str(manifest),
+            "--public-key",
+            str(pem_path),
+        ],
+    )
     assert result.exit_code == 0, result.output
 
 
@@ -148,8 +203,16 @@ def test_publish_key_uploads_pem(runner, kms_client, s3_client, signing_key):
         Bucket=bucket,
         CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
     )
-    result = runner.invoke(main, [
-        "publish-key", "--key-arn", signing_key["Arn"],
-        "--bucket", bucket, "--version", "v1",
-    ])
+    result = runner.invoke(
+        main,
+        [
+            "publish-key",
+            "--key-arn",
+            signing_key["Arn"],
+            "--bucket",
+            bucket,
+            "--version",
+            "v1",
+        ],
+    )
     assert result.exit_code == 0, result.output

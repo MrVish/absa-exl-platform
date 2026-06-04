@@ -39,7 +39,7 @@ def s3_client(mock_aws_ctx):
 @pytest.fixture
 def signing_key(kms_client) -> dict:
     """Create a moto-backed RSA-3072 asymmetric KMS key. Returns the key's
-       metadata dict (KeyId, Arn) for tests."""
+    metadata dict (KeyId, Arn) for tests."""
     resp = kms_client.create_key(
         Description="test signing key",
         KeyUsage="SIGN_VERIFY",
@@ -88,8 +88,11 @@ def pipelines_tree(tmp_path, unsigned_envelope):
     other_payload = dict(unsigned_envelope["payload"])
     other_payload["model_name"] = "fraud-detection"
     other_payload["version"] = "0.1.0"
-    other_envelope = {**unsigned_envelope, "payload": other_payload,
-                      "subject_ref": "pipeline:fraud-detection:0.1.0"}
+    other_envelope = {
+        **unsigned_envelope,
+        "payload": other_payload,
+        "subject_ref": "pipeline:fraud-detection:0.1.0",
+    }
     two = root / "fraud-detection" / "0.1.0"
     two.mkdir(parents=True)
     (two / "manifest.json").write_text(json.dumps(other_envelope, sort_keys=True, indent=2) + "\n")

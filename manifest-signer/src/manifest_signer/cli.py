@@ -157,9 +157,7 @@ def sign_all_cmd(
             if not continue_on_error:
                 raise
 
-    click.echo(
-        f"Done. signed={signed_count} skipped-existing={skipped_count} errors={error_count}"
-    )
+    click.echo(f"Done. signed={signed_count} skipped-existing={skipped_count} errors={error_count}")
     if error_count and continue_on_error:
         sys.exit(1)
 
