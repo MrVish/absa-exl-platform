@@ -42,7 +42,10 @@ def test_additional_property_fails() -> None:
 
 
 def test_with_code_versions_passes() -> None:
-    validate("model-config", {**VALID, "sas_code_version": "sas-2026.04.1", "inference_code_version": "py-2026.04.1"})
+    validate(
+        "model-config",
+        {**VALID, "sas_code_version": "sas-2026.04.1", "inference_code_version": "py-2026.04.1"},
+    )
 
 
 def test_empty_sas_code_version_fails() -> None:
