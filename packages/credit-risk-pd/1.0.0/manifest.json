@@ -1,0 +1,85 @@
+{
+  "digest": "3b1134c4775a2b58ea8a57888a33e12ec697ea86fe6f905020427dcefabcbdf6",
+  "digest_algorithm": "SHA-256",
+  "payload": {
+    "code_intake_version": "0.1.0",
+    "generated_at": "2026-06-04T20:01:21+00:00",
+    "model_name": "credit-risk-pd",
+    "package_layout": {
+      "model_config_ref": {
+        "path": "model_config.yaml",
+        "sha256": "544e544c3378132b82edacc96a53e07da7700fbd3319903d9cb24006285bcc1e"
+      },
+      "pir_ref": {
+        "path": "pir.yaml",
+        "sha256": "d45facf803fc8e8164e5666417264e241aced2f7d9570dc25df4bebeb261bc1e"
+      },
+      "python_files": [
+        {
+          "path": "python/conftest.py",
+          "sha256": "88781673f7b00dbb76b643e7684101f9c107bd6ea6bfa0f9904b7c7f892ad490"
+        },
+        {
+          "path": "python/score.py",
+          "sha256": "2f4d5147177e042ead95d4ea7027dd70ddd802312087a3cd1f92b8e6e9362f4e"
+        }
+      ],
+      "sas_files": [
+        {
+          "path": "sas/score.sas",
+          "sha256": "5a9b62b8b1d5231605dde853366d24c74ab05d9708a3756cd3554f1d3b0ddfdb"
+        }
+      ],
+      "test_files": [
+        {
+          "path": "python/tests/test_score.py",
+          "sha256": "153c78ec74822ab1582a229c86b9985fc780f627c6914f1d03890950af1f6cc4"
+        }
+      ]
+    },
+    "schema_version": 1,
+    "validation_summary": {
+      "checks": [
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "static_python",
+          "passed": true
+        },
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "static_sas",
+          "passed": true
+        },
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "schema",
+          "passed": true
+        },
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "pir",
+          "passed": true
+        }
+      ],
+      "ran_at": "2026-06-04T20:01:21+00:00"
+    },
+    "version": "1.0.0"
+  },
+  "signature": "UNSIGNED",
+  "signed_at": "2026-06-04T20:01:21+00:00",
+  "signer_principal": "unsigned",
+  "signing_algorithm": "RSASSA_PKCS1_V1_5_SHA_256",
+  "signing_key_arn": "arn:aws:kms:placeholder:000000000000:key/unsigned",
+  "subject_ref": "packages/credit-risk-pd/1.0.0/",
+  "subject_type": "package"
+}

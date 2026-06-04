@@ -1,0 +1,15 @@
+mapping_version: 1
+model_name: credit-risk-pd
+model_version: 1.0.0
+
+inputs:
+  - { name: income_band,   type: float, source: customer.income_band_lookup,
+      description: "Discretised income tier (1..5)" }
+  - { name: tenure_months, type: int,   source: customer.tenure_months,
+      description: "Months since account opening" }
+  - { name: delinquencies, type: float, source: customer.delinquencies_12m,
+      description: "Count of 30+ DPD events in last 12 months", nullable: true }
+
+outputs:
+  - { name: pd_score,  type: float,  description: "Probability of default (0..1)" }
+  - { name: risk_band, type: string, description: "HIGH / MEDIUM / LOW" }
