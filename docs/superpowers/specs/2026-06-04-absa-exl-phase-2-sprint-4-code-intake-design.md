@@ -49,7 +49,7 @@ Sprint 3's spec called the remaining Phase 2 work "Code Intake + first end-to-en
    - `pipeline-factory.manifest.build_payload` gains an optional `upstream_refs` parameter, defaulting to `[]`.
    - New `pipeline_factory/upstream_resolver.py` — pure function reading `packages/<name>/<version>/manifest.json` and returning the `upstream_refs[]` entry. Raises `GeneratorError` if the package manifest is missing or lacks a `digest`.
    - `pipeline_factory.generator` calls the resolver when the loaded model config has an `upstream_package: {name, version}` block.
-   - The pipeline-factory `model-config.schema.json` gains the optional `upstream_package` block.
+   - The shared `model-config.schema.json` in `platform-contracts/` (the single source of truth — pipeline-factory does not own its own schema copy) gains the optional `upstream_package` block.
 
 5. **Worked example `packages/credit-risk-pd/1.0.0/`:** synthetic SAS scoring stub + Python `score(data)` function + 2-3 pytest unit tests + PIR YAML mapping the three Python-referenced columns (`income_band`, `tenure_months`, `delinquencies`) + a package-level `model_config.yaml` + README. Sufficient to make every checker exercise a real code path.
 
@@ -206,8 +206,9 @@ pipeline-factory/src/pipeline_factory/
 ├── generator.py                                      (MODIFY — resolves upstream_package -> upstream_refs)
 └── upstream_resolver.py                              (NEW — thin reader for package manifest)
 
-pipeline-factory/src/pipeline_factory/schemas/model-config.schema.json
-                                                      (MODIFY — add optional upstream_package block)
+platform-contracts/src/platform_contracts/schemas/model-config.schema.json
+                                                      (MODIFY — add optional upstream_package block; shared schema, no
+                                                       per-package copy in pipeline-factory)
 
 pipeline-factory/configs/credit-risk-pd/1.0.0/
 └── model_config.yaml                                 (MODIFY — add upstream_package: {name, version})
