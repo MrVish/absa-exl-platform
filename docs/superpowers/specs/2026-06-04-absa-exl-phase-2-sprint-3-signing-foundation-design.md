@@ -584,8 +584,12 @@ def publish_public_key(
        s3://<bucket>/manifest-signing/<key_id>/<version>.pem. Returns the s3 URI.
 
        Idempotent — re-runs upload the same PEM content (the public key is
-       immutable for a given KMS key). Uploads use IfNoneMatch="*"; 412 is
-       swallowed as success.
+       immutable for a given KMS key). Unlike the signer's S3 uploads, the
+       publisher does NOT use IfNoneMatch="*": key rotation is a valid
+       use case where a new CMK version produces new bytes for the same
+       `<key_id>/<version>.pem` path (when the operator chooses to reuse
+       the version label), and 412-on-rotation would block that flow.
+       Overwriting byte-identical PEM bytes is a no-op at the audit layer.
     """
 ```
 
