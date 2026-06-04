@@ -6,6 +6,7 @@ CASES = [
     ("model-config", "ModelConfig"),
     ("registry-record", "RegistryRecord"),
     ("manifest-envelope", "ManifestEnvelope"),
+    ("pipeline-manifest-payload", "PipelineManifestPayload"),
 ]
 
 
