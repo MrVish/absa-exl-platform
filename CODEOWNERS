@@ -8,3 +8,5 @@ ci/                                @platform-leads
 .github/workflows/                 @platform-leads
 platform-contracts/                @platform-leads
 registry/                          @platform-leads
+pipeline-factory/                  @platform-leads
+pipelines/                         @platform-leads
