@@ -62,3 +62,23 @@ def test_regenerate_with_force_overwrites(sample_config: Path, tmp_path: Path) -
     generate(sample_config, outputs_root=tmp_path / "pipelines", force=True)
     content = (out_dir / "statemachine.json").read_text()
     assert "StartAt" in content
+
+
+def test_regenerate_without_changes_is_idempotent(sample_config: Path, tmp_path: Path) -> None:
+    out_root = tmp_path / "pipelines"
+    out_dir1 = generate(sample_config, outputs_root=out_root)
+    # Snapshot all four artifacts
+    snapshot = {
+        p: p.read_text(encoding="utf-8")
+        for p in (
+            out_dir1 / "statemachine.json",
+            out_dir1 / "registration.json",
+            out_dir1 / "manifest.json",
+            out_dir1 / "terraform" / "main.tf",
+        )
+    }
+    # Re-run without force — must not raise, and contents must be byte-identical
+    out_dir2 = generate(sample_config, outputs_root=out_root)
+    assert out_dir2 == out_dir1
+    for path, original in snapshot.items():
+        assert path.read_text(encoding="utf-8") == original, f"drift in {path}"

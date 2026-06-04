@@ -39,7 +39,12 @@ def build_payload(
     }
 
 
-def build_envelope(*, payload: dict[str, Any], subject_ref: str) -> dict[str, Any]:
+def build_envelope(
+    *,
+    payload: dict[str, Any],
+    subject_ref: str,
+    signed_at: str | None = None,
+) -> dict[str, Any]:
     """Wrap *payload* in a manifest-envelope.
 
     Unsigned by design — sub-sprint 2.3 (Code Intake) fills the signature fields.
@@ -53,7 +58,7 @@ def build_envelope(*, payload: dict[str, Any], subject_ref: str) -> dict[str, An
         "signing_algorithm": UNSIGNED_SIGNING_ALGORITHM,
         "subject_type": "pipeline",
         "subject_ref": subject_ref,
-        "signed_at": datetime.now(UTC).isoformat(),
+        "signed_at": signed_at or datetime.now(UTC).isoformat(),
         "signer_principal": UNSIGNED_PRINCIPAL,
         "payload": payload,
     }

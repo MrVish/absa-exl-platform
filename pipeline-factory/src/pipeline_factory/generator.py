@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,23 @@ from .manifest import build_envelope, build_payload
 from .renderer import render_pipeline_tf, render_statemachine
 
 OUTPUTS_ROOT = Path("pipelines")
+
+
+def _existing_manifest_timestamps(out_dir: Path) -> tuple[str | None, str | None]:
+    """Return (generated_at, signed_at) from an existing manifest.json.
+
+    Returns (None, None) if the file is absent or unreadable.
+    """
+    manifest_path = out_dir / "manifest.json"
+    if not manifest_path.exists():
+        return None, None
+    try:
+        envelope = json.loads(manifest_path.read_text(encoding="utf-8"))
+        generated_at = envelope.get("payload", {}).get("generated_at")
+        signed_at = envelope.get("signed_at")
+        return generated_at, signed_at
+    except (json.JSONDecodeError, OSError):
+        return None, None
 
 
 class PipelineDriftError(Exception):
@@ -93,13 +111,19 @@ def generate(
         "model_config_sha256": sha256_of_text(config_path.read_text(encoding="utf-8")),
         "registration_sha256": sha256_of_text(registration_json),
     }
+    existing_generated_at, existing_signed_at = _existing_manifest_timestamps(out_dir)
     payload = build_payload(
         model_name=model_name,
         version=version,
         tier=tier,
         artifact_hashes=artifact_hashes,
+        generated_at=existing_generated_at,
     )
-    envelope = build_envelope(payload=payload, subject_ref=f"pipelines/{model_name}/{version}/")
+    envelope = build_envelope(
+        payload=payload,
+        subject_ref=f"pipelines/{model_name}/{version}/",
+        signed_at=existing_signed_at,
+    )
     manifest_json = canonical_json(envelope).decode("utf-8")
 
     files: dict[Path, str] = {

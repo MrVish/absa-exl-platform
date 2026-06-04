@@ -65,3 +65,19 @@ def test_is_signed_true_when_signature_overwritten() -> None:
     envelope = build_envelope(payload=payload, subject_ref="pipelines/credit-risk-pd/1.0.0/")
     envelope["signature"] = "REAL_BASE64_SIG_VALUE=="
     assert is_signed(envelope) is True
+
+
+def test_build_envelope_uses_provided_signed_at() -> None:
+    payload = build_payload(
+        model_name="credit-risk-pd",
+        version="1.0.0",
+        tier="standard",
+        artifact_hashes=_hashes(),
+        generated_at="2026-05-26T06:00:00+00:00",
+    )
+    envelope = build_envelope(
+        payload=payload,
+        subject_ref="pipelines/credit-risk-pd/1.0.0/",
+        signed_at="2026-05-26T06:00:00+00:00",
+    )
+    assert envelope["signed_at"] == "2026-05-26T06:00:00+00:00"
