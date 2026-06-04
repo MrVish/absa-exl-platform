@@ -10,6 +10,7 @@ on:
       - "pipeline-factory/**"
       - "pipelines/**"
       - "platform-contracts/**"
+      - "manifest-signer/**"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/pipeline-factory.yml"
@@ -22,6 +23,7 @@ on:
       - "pipeline-factory/**"
       - "pipelines/**"
       - "platform-contracts/**"
+      - "manifest-signer/**"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/pipeline-factory.yml"
@@ -55,9 +57,51 @@ jobs:
           done
           git diff --exit-code pipelines/
 
+  sign:
+    name: sign (kms:Sign + upload to S3)
+    needs: validate-and-generate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      SIGNER_ROLE_ARN: ${{ secrets.AWS_OIDC_SIGNER_ROLE_ARN }}
+      KMS_KEY_ARN: ${{ secrets.AWS_KMS_SIGNING_KEY_ARN }}
+      SIGNED_MANIFESTS_BUCKET: ${{ secrets.AWS_SIGNED_MANIFESTS_BUCKET }}
+    concurrency:
+      group: pipeline-factory-sign
+      cancel-in-progress: false
+    steps:
+      - name: Skip if not configured
+        if: env.SIGNER_ROLE_ARN == ''
+        run: echo "AWS_OIDC_SIGNER_ROLE_ARN not set — sign step is a no-op until creds land."
+      - uses: actions/checkout@v4
+        if: env.SIGNER_ROLE_ARN != ''
+      - uses: astral-sh/setup-uv@v5
+        if: env.SIGNER_ROLE_ARN != ''
+        with:
+          enable-cache: true
+      - name: Sync
+        if: env.SIGNER_ROLE_ARN != ''
+        run: uv sync --frozen
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: env.SIGNER_ROLE_ARN != ''
+        with:
+          role-to-assume: ${{ env.SIGNER_ROLE_ARN }}
+          aws-region: eu-west-1
+      - name: Sign all unsigned manifests
+        if: env.SIGNER_ROLE_ARN != ''
+        run: |
+          set -euo pipefail
+          # Build the assumed-role STS session ARN to record as signer_principal
+          CALLER=$(aws sts get-caller-identity --query Arn --output text)
+          uv run manifest-signer sign-all \
+            --root pipelines \
+            --key-arn "$KMS_KEY_ARN" \
+            --upload-to-bucket "$SIGNED_MANIFESTS_BUCKET" \
+            --signer-principal "$CALLER"
+
   register:
     name: register (POST to Registry API)
-    needs: validate-and-generate
+    needs: [validate-and-generate, sign]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:

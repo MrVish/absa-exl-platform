@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["platform-contracts", "registry/api", "pipeline-factory"]
+members = ["platform-contracts", "registry/api", "pipeline-factory", "manifest-signer"]
 
 [dependency-groups]
 dev = [
@@ -30,9 +30,9 @@ python_version = "3.12"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["moto.*", "mangum.*", "boto3.*", "botocore.*"]
+module = ["moto.*", "mangum.*", "boto3.*", "botocore.*", "mypy_boto3_kms.*", "mypy_boto3_s3.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q --import-mode=importlib"
-testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests"]
+testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests", "manifest-signer/tests"]

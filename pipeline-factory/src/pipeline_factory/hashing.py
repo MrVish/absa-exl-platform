@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import subprocess
 import tempfile
 from typing import Any
 
+from platform_contracts.canonical import canonical_json
 
-def canonical_json(obj: Any) -> bytes:
-    """JSON-serialise *obj* deterministically.
-
-    Uses sorted keys, 2-space indent, UTF-8 encoding, and a trailing newline.
-    """
-    return json.dumps(obj, sort_keys=True, indent=2, ensure_ascii=False).encode("utf-8") + b"\n"
+__all__ = ["canonical_json", "sha256_of_bytes", "sha256_of_text", "sha256_of_json", "terraform_fmt"]
 
 
 def sha256_of_bytes(data: bytes) -> str:
@@ -54,8 +49,6 @@ def terraform_fmt(text: str) -> str:
         )
         with open(tmp_path, encoding="utf-8") as fp:
             result = fp.read()
-        # terraform fmt on a file strips the final newline on some versions;
-        # normalise to always end with exactly one newline (matching stdin behaviour).
         return result if result.endswith("\n") else result + "\n"
     finally:
         os.unlink(tmp_path)

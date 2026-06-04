@@ -84,6 +84,7 @@ jobs:
           - terraform/envs/dev/registry
           - terraform/envs/stg/registry
           - terraform/envs/prod/registry
+          - terraform/envs/prod/signing
           - terraform/account-bootstrap/exl-dev
           - terraform/account-bootstrap/exl-stg
           - terraform/account-bootstrap/exl-prod
