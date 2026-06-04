@@ -5,6 +5,8 @@ on:
     paths:
       - "platform-contracts/**"
       - "registry/**"
+      - "pipeline-factory/**"
+      - "pipelines/**"
       - "pyproject.toml"
       - "uv.lock"
       - ".python-version"
@@ -25,7 +27,7 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
       - name: Types
-        run: uv run mypy platform-contracts/src registry/api/src
+        run: uv run mypy platform-contracts/src registry/api/src pipeline-factory/src
       - name: Tests
         run: uv run pytest
       - name: Contract model drift check
