@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import copy
-import hashlib
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
@@ -49,8 +48,18 @@ def sign_envelope(
 
     `signer_principal` is the caller's resolved STS session ARN — convention
     documented in ADR-0009.
+
+    Wire format note: we send the canonical_json bytes as ``MessageType=RAW``
+    rather than precomputing a SHA-256 digest and sending ``MessageType=DIGEST``.
+    Both produce identical signatures under RSASSA_PKCS1_V1_5_SHA_256 against
+    real AWS KMS (which hashes raw messages with SHA-256 server-side). The RAW
+    path is also faithful under moto, which does not honor MessageType=DIGEST
+    (see moto/kms/models.py: "The MessageType-parameter DIGEST is not yet
+    implemented"). Choosing RAW lets the round-trip tests in
+    test_verifier_offline.py validate the verifier against signatures produced
+    by the moto-mocked signer.
     """
-    digest = hashlib.sha256(canonical_json(unsigned_envelope["payload"])).digest()
+    payload_bytes = canonical_json(unsigned_envelope["payload"])
 
     # Resolve the key ARN up front. If the caller passed an alias, KMS resolves
     # it via DescribeKey; we need the resolved ARN for both the idempotency
@@ -70,8 +79,8 @@ def sign_envelope(
 
     resp = kms_client.sign(
         KeyId=resolved_key_arn,
-        Message=digest,
-        MessageType="DIGEST",
+        Message=payload_bytes,
+        MessageType="RAW",
         SigningAlgorithm=SIGNING_ALGORITHM,
     )
 
