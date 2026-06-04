@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 from typing import Any
 
@@ -29,13 +30,18 @@ def sha256_of_json(obj: Any) -> str:
 def terraform_fmt(text: str) -> str:
     """Run ``terraform fmt -`` on *text* and return the formatted output.
 
-    Requires the ``terraform`` binary on PATH.
+    Requires the ``terraform`` binary on PATH. Disables Hashicorp's checkpoint
+    telemetry (which can hang in restricted CI networks) and enforces a 30s
+    timeout as a defense-in-depth against future subprocess hangs.
     """
+    env = {**os.environ, "CHECKPOINT_DISABLE": "1", "TF_IN_AUTOMATION": "1"}
     completed = subprocess.run(
         ["terraform", "fmt", "-"],
         input=text,
         capture_output=True,
         text=True,
         check=True,
+        timeout=30,
+        env=env,
     )
     return completed.stdout

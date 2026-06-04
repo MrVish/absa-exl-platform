@@ -46,7 +46,7 @@ jobs:
       - name: Sync
         run: uv sync --frozen
       - name: Pipeline-factory tests
-        run: uv run pytest pipeline-factory/tests -v --timeout=60 --timeout-method=thread
+        run: uv run pytest pipeline-factory/tests -q
       - name: Regenerate every fixture and assert byte-stability
         run: |
           set -euo pipefail
