@@ -86,7 +86,15 @@ def sign_envelope(
 
 def _resolve_key_arn(kms_client: KMSClient, key_arn_or_alias: str) -> str:
     """If the caller passed an alias, resolve to the underlying key ARN.
-       If they passed a real ARN, return it unchanged."""
+    If they passed a real ARN, return it unchanged.
+
+    Callers MUST pass either an alias (``alias/...`` or qualified alias ARN)
+    or a full key ARN. Bare key UUIDs are returned unchanged and would land
+    in the envelope's ``signing_key_arn`` field as a UUID rather than an
+    ARN — defeating the audit-trail's immutable-identifier requirement. The
+    pipeline-factory CLI and CI workflow both pass full ARNs, so the
+    UUID path is not a supported caller shape.
+    """
     if not key_arn_or_alias.startswith("alias/") and ":alias/" not in key_arn_or_alias:
         return key_arn_or_alias
     resp = kms_client.describe_key(KeyId=key_arn_or_alias)

@@ -6,7 +6,6 @@ silently drifted and previously-signed manifests will no longer verify.
 from __future__ import annotations
 
 import pytest
-
 from pipeline_factory.manifest import build_envelope, build_payload
 from platform_contracts.canonical import canonical_json
 

@@ -1,5 +1,4 @@
 import pytest
-
 from manifest_signer.errors import KeyMismatchError, SignerError, VerificationError
 
 

@@ -117,7 +117,11 @@ def test_resign_with_same_key_is_noop(
         signer_principal=signer_principal,
         signed_at="2026-06-01T12:00:00+00:00",
     )
-    assert out == signed
+    # `is` not `==` — proves the short-circuit returned the input object
+    # itself rather than re-signing to produce an equal-but-distinct dict.
+    # The short-circuit is what protects against KMS quota burn + audit-log
+    # noise on CI re-runs; an `==` assertion would silently pass either way.
+    assert out is signed
 
 
 def test_resign_with_different_key_raises_key_mismatch(
