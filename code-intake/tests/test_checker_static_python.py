@@ -29,3 +29,16 @@ def test_no_python_dir_returns_passed_with_zero_findings():
         result = StaticPythonChecker().run(Path(td))
         assert result.passed
         assert result.findings == []
+
+
+def test_empty_python_dir_returns_passed_with_zero_findings():
+    """Packages with an empty python/ dir are valid (developer in-progress,
+    moved-away files). Without this guard, mypy emits 'no .py files in
+    directory' and the operator sees a confusing PY002."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        (Path(td) / "python").mkdir()
+        result = StaticPythonChecker().run(Path(td))
+        assert result.passed, f"unexpected findings: {result.findings}"
+        assert result.findings == []

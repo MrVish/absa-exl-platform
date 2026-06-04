@@ -1,5 +1,17 @@
 """static_python checker: runs ruff, mypy --strict, and pytest --collect-only
-against the package's python/ directory via subprocess."""
+against the package's python/ directory via subprocess.
+
+Workspace-toolchain assumption (per ADR-0010 §"Negative (accepted)"): ruff
+and mypy are invoked with the caller's cwd inherited, so they resolve the
+WORKSPACE's `pyproject.toml` configuration (line length, lint rule set,
+mypy strictness). This is intentional for Sprint 4 — packages are
+workspace-toolchain-compatible. Phase 3 packages with isolated runtime
+deps will switch to per-package cwd or per-package venvs.
+
+The pytest subprocess uses `cwd=python_dir` + `--confcutdir=.` so it
+doesn't walk up to the workspace's conftest/testpaths. The package must be
+discoverable in isolation regardless of where it sits on disk.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +28,12 @@ class StaticPythonChecker:
         python_dir = package_path / "python"
         if not python_dir.is_dir():
             # Pure-SAS packages are valid — no Python to check.
+            return CheckResult(checker=self.name, passed=True)
+
+        if not any(python_dir.rglob("*.py")):
+            # Empty python/ — treat like missing python/, no-op pass.
+            # mypy would otherwise emit "There are no .py[i] files in
+            # directory" which the operator sees as a confusing PY002.
             return CheckResult(checker=self.name, passed=True)
 
         findings: list[Finding] = []
