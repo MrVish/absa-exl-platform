@@ -27,6 +27,10 @@ Use **AWS KMS asymmetric CMKs (RSA-3072 default; ECC-NIST-P384 supported)** for 
   1. **Online** via `kms:Verify` against the live CMK.
   2. **Offline** by fetching the published public key from `s3://exl-platform-public-keys/manifest-signing/<key_id>/v<version>.pem` (versioned, world-readable bucket) and verifying with any standard RSA / ECC tooling.
 
+## Storage layout (locked in ADR-0009)
+
+Signed manifest envelopes are uploaded to `s3://exl-platform-signed-manifests/<name>/<version>/manifest.json` by the CI signer immediately after generation. Public keys for offline verification are published to `s3://exl-platform-public-keys/manifest-signing/<key_id>/<version>.pem`. See [ADR-0009](0009-signing-foundation-topology.md) for the IAM, KMS, and OIDC topology that supports these paths.
+
 ## Consequences
 
 ### Positive
