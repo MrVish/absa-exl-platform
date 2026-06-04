@@ -58,6 +58,8 @@ class ModelConfig(ContractBase):
     sla_seconds: Annotated[int, Field(gt=0)]
     model_class: ModelClass | None = None
     registry_lookup_key: str | None = None
+    sas_code_version: Annotated[str | None, Field(min_length=1)] = None
+    inference_code_version: Annotated[str | None, Field(min_length=1)] = None
 
 class ApprovalStatus(StrEnum):
     pending = 'pending'
