@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import boto3
 import pytest
 from moto import mock_aws
@@ -65,3 +67,30 @@ def unsigned_envelope() -> dict:
 @pytest.fixture
 def signer_principal() -> str:
     return "arn:aws:sts::111122223333:assumed-role/pipeline-factory-signer/test-session"
+
+
+@pytest.fixture
+def pipelines_tree(tmp_path, unsigned_envelope):
+    """Build a fixture pipelines/ tree with two UNSIGNED manifests so sign-all
+    has work to discover. The 'already-signed' path is exercised separately by
+    test_sign_all_second_run_is_idempotent which runs sign-all twice."""
+    root = tmp_path / "pipelines"
+    one = root / "credit-risk-pd" / "1.0.0"
+    one.mkdir(parents=True)
+    (one / "manifest.json").write_text(
+        json.dumps(unsigned_envelope, sort_keys=True, indent=2) + "\n"
+    )
+
+    # Second manifest: another UNSIGNED envelope (the signer will sign it on the
+    # first run; the second run is exercised separately by the idempotency test).
+    # Mutate model_name + version so the s3_key (derived from payload, not path)
+    # matches the directory layout `fraud-detection/0.1.0/`.
+    other_payload = dict(unsigned_envelope["payload"])
+    other_payload["model_name"] = "fraud-detection"
+    other_payload["version"] = "0.1.0"
+    other_envelope = {**unsigned_envelope, "payload": other_payload,
+                      "subject_ref": "pipeline:fraud-detection:0.1.0"}
+    two = root / "fraud-detection" / "0.1.0"
+    two.mkdir(parents=True)
+    (two / "manifest.json").write_text(json.dumps(other_envelope, sort_keys=True, indent=2) + "\n")
+    return root
