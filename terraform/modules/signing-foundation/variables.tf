@@ -12,12 +12,25 @@ variable "region" {
 variable "repo_full_name" {
   description = "GitHub repository in <owner>/<repo> form for OIDC sub-claim trust."
   type        = string
+  validation {
+    condition     = can(regex("^[^/[:space:]]+/[^/[:space:]]+$", var.repo_full_name))
+    error_message = "repo_full_name must be in <owner>/<repo> form (no protocol, no extra slashes, no whitespace)."
+  }
 }
 
 variable "allowed_refs" {
   description = "List of GitHub refs allowed to assume the signer and registrar roles. Defaults to refs/heads/main only."
   type        = list(string)
   default     = ["refs/heads/main"]
+  validation {
+    condition     = alltrue([for r in var.allowed_refs : startswith(r, "refs/")])
+    error_message = "allowed_refs entries must start with 'refs/' (e.g. refs/heads/main, refs/tags/v1.0.0)."
+  }
+}
+
+variable "github_oidc_provider_arn" {
+  description = "ARN of the GitHub Actions OIDC identity provider in this AWS account. Created upstream by the iam-federation module (see terraform/modules/iam-federation/outputs.tf:26 `github_oidc_provider_arn`). This module consumes the existing provider rather than creating a duplicate (only one OIDC provider per (URL, account) pair is allowed in AWS)."
+  type        = string
 }
 
 variable "key_admin_principals" {

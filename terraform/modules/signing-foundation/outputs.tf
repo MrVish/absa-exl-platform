@@ -27,8 +27,3 @@ output "public_keys_bucket" {
   description = "Name of the S3 bucket holding published public keys."
   value       = aws_s3_bucket.public_keys.id
 }
-
-output "oidc_provider_arn" {
-  description = "ARN of the GitHub Actions OIDC identity provider."
-  value       = aws_iam_openid_connect_provider.github_actions.arn
-}

@@ -8,6 +8,10 @@ resource "aws_s3_bucket" "signed_manifests" {
     env    = var.env
     region = var.region
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "signed_manifests" {
@@ -51,6 +55,10 @@ resource "aws_s3_bucket" "public_keys" {
     env    = var.env
     region = var.region
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "public_keys" {
@@ -92,6 +100,11 @@ data "aws_iam_policy_document" "public_keys_read" {
     principals {
       type        = "*"
       identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["true"]
     }
   }
 }
