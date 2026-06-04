@@ -33,5 +33,5 @@ module = ["moto.*", "mangum.*", "boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-q --import-mode=importlib"
 testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests"]
