@@ -17,7 +17,9 @@ trap 'rm -rf "$TMPDIR"' EXIT
 SCHEMAS=(
   "manifest-envelope.schema.json"
   "model-config.schema.json"
+  "package-manifest-payload.schema.json"
   "pipeline-manifest-payload.schema.json"
+  "pir-mapping.schema.json"
   "registry-record.schema.json"
 )
 

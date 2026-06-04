@@ -23,6 +23,16 @@
     "model_class": { "type": "string", "enum": ["credit", "fraud", "propensity", "other"] },
     "registry_lookup_key": { "type": "string" },
     "sas_code_version": { "type": "string", "minLength": 1 },
-    "inference_code_version": { "type": "string", "minLength": 1 }
+    "inference_code_version": { "type": "string", "minLength": 1 },
+    "upstream_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "description": "Code Intake package this pipeline scores from. When set, the generator embeds an upstream_refs entry in the pipeline manifest.",
+      "properties": {
+        "name":    { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" }
+      }
+    }
   }
 }

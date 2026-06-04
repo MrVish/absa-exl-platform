@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.absa-exl.internal/package-manifest-payload/v1.json",
+  "title": "PackageManifestPayload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "code_intake_version", "model_name", "version",
+    "generated_at", "package_layout", "validation_summary"
+  ],
+  "properties": {
+    "schema_version":      { "type": "integer", "const": 1 },
+    "code_intake_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "model_name":          { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+    "version":             { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "generated_at":        { "type": "string", "format": "date-time" },
+    "package_layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sas_files", "python_files", "test_files", "pir_ref", "model_config_ref"],
+      "properties": {
+        "sas_files":         { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
+        "python_files":      { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
+        "test_files":        { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
+        "pir_ref":           { "$ref": "#/$defs/file_ref" },
+        "model_config_ref":  { "$ref": "#/$defs/file_ref" }
+      }
+    },
+    "validation_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ran_at", "checks"],
+      "properties": {
+        "ran_at": { "type": "string", "format": "date-time" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "passed", "finding_count"],
+            "properties": {
+              "name":          { "type": "string" },
+              "passed":        { "type": "boolean" },
+              "finding_count": { "type": "integer", "minimum": 0 },
+              "codes":         { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "file_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path":   { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}
