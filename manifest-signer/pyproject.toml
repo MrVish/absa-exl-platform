@@ -1,0 +1,24 @@
+[project]
+name = "manifest-signer"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "platform-contracts",
+    "boto3>=1.34",
+    "botocore>=1.34",
+    "cryptography>=43",
+    "click>=8.1",
+]
+
+[project.scripts]
+manifest-signer = "manifest_signer.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/manifest_signer"]
+
+[tool.uv.sources]
+platform-contracts = { workspace = true }
