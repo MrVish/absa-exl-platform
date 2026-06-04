@@ -17,6 +17,7 @@ from typing import Any
 
 import boto3
 import click
+from platform_contracts.canonical import canonical_json
 
 from .errors import VerificationError
 from .publisher import publish_public_key
@@ -64,7 +65,6 @@ def sign_cmd(
     if dry_run:
         import hashlib
 
-        from platform_contracts.canonical import canonical_json
         digest = hashlib.sha256(canonical_json(envelope["payload"])).hexdigest()
         click.echo(f"[dry-run] would sign payload digest={digest} with key={key_arn}")
         return
@@ -77,12 +77,16 @@ def sign_cmd(
         signer_principal=signer_principal,
     )
 
+    # Always serialise via canonical_json so on-disk and S3 bytes are
+    # deterministic regardless of future envelope field-ordering changes —
+    # this is what makes the sign-all `IfNoneMatch="*"` idempotency story
+    # robust against accidental key-insertion-order drift.
     if upload_to:
         _upload_signed_envelope(signed, s3_uri=upload_to)
     if in_place:
-        manifest.write_text(json.dumps(signed, indent=2, ensure_ascii=False) + "\n")
+        manifest.write_bytes(canonical_json(signed))
     if not upload_to and not in_place:
-        click.echo(json.dumps(signed, indent=2, ensure_ascii=False))
+        click.echo(canonical_json(signed).decode("utf-8").rstrip("\n"))
 
 
 @main.command("sign-all")
@@ -135,7 +139,7 @@ def sign_all_cmd(
                 s3.put_object(
                     Bucket=upload_to_bucket,
                     Key=s3_key,
-                    Body=json.dumps(signed, indent=2, ensure_ascii=False).encode("utf-8"),
+                    Body=canonical_json(signed),
                     ContentType="application/json",
                     IfNoneMatch="*",
                 )
@@ -236,7 +240,7 @@ def _upload_signed_envelope(envelope: dict[str, Any], *, s3_uri: str) -> None:
         raise click.BadParameter(f"--upload-to must be an s3:// URI, got {s3_uri!r}")
     bucket, _, key = s3_uri[5:].partition("/")
     s3 = boto3.client("s3")
-    body = json.dumps(envelope, indent=2, ensure_ascii=False).encode("utf-8")
+    body = canonical_json(envelope)
     try:
         s3.put_object(
             Bucket=bucket,
