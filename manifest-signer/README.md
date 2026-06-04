@@ -9,7 +9,7 @@ See [Sprint 3 spec](../docs/superpowers/specs/2026-06-04-absa-exl-phase-2-sprint
 | Command | Use case |
 |---|---|
 | `manifest-signer sign --manifest <path> --key-arn <arn> --signer-principal <arn> [--upload-to s3://...] [--in-place] [--dry-run]` | Sign a single manifest file. `--dry-run` skips KMS and prints what would be signed. `--upload-to` uploads to S3 with `IfNoneMatch="*"`. `--in-place` overwrites the local file. |
-| `manifest-signer sign-all --root <dir> --key-arn <arn> --upload-to-bucket <bucket> --signer-principal <arn>` | CI workhorse. Globs `<root>/*/*/manifest.json`, signs every UNSIGNED one, uploads to S3. Derives `<name>/<version>` from the manifest's payload. `412 PreconditionFailed` is treated as success. |
+| `manifest-signer sign-all --root <dir> --key-arn <arn> --upload-to-bucket <bucket> --signer-principal <arn> [--continue-on-error]` | CI workhorse. Globs `<root>/*/*/manifest.json`, signs every UNSIGNED one, uploads to S3. Derives `<name>/<version>` from the manifest's payload. `412 PreconditionFailed` is treated as success. `--continue-on-error` keeps the loop running on per-file failures and exits 1 at the end if any failed. |
 | `manifest-signer verify-online --manifest <path>` | KMS round-trip verification against the live CMK. Exit 0 / 1. |
 | `manifest-signer verify-offline --manifest <path> --public-key <path>` | Local verification with no AWS access required, against a PEM-encoded public key. |
 | `manifest-signer publish-key --key-arn <arn> --bucket <name> [--version v1]` | One-shot: fetch CMK public key, PEM-encode, upload to S3. Run after first apply and on each key rotation. |
@@ -30,7 +30,7 @@ All three functions are pure with respect to their `kms_client` / `s3_client` pa
 
 ## Testing
 
-The package's 34 tests (across `test_signer.py`, `test_verifier_online.py`, `test_verifier_offline.py`, `test_publisher.py`, `test_cli.py`, `test_canonical_compat.py`, `test_errors.py`, `test_smoke.py`, `test_e2e.py`) all use `moto v5` for AWS mocking — no real AWS credentials required to run them. From the repo root:
+The package's 35 tests (across `test_signer.py`, `test_verifier_online.py`, `test_verifier_offline.py`, `test_publisher.py`, `test_cli.py`, `test_canonical_compat.py`, `test_errors.py`, `test_smoke.py`, `test_e2e.py`) all use `moto v5` for AWS mocking — no real AWS credentials required to run them. From the repo root:
 
 ```bash
 uv run pytest manifest-signer/tests
