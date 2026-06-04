@@ -1,0 +1,10 @@
+mapping_version: 1
+model_name: broken-pir
+model_version: 1.0.0
+
+inputs:
+  - { name: income_band, type: float, source: customer.income_band }
+  # tenure_months intentionally missing — score.py references it
+
+outputs:
+  - { name: pd_score, type: float }
