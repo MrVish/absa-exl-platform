@@ -1,0 +1,48 @@
+name: publish-signing-key
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for the published public key (e.g. v1, v2)'
+        required: true
+        default: 'v1'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: publish public key
+    runs-on: ubuntu-latest
+    env:
+      SIGNER_ROLE_ARN: ${{ secrets.AWS_OIDC_SIGNER_ROLE_ARN }}
+      KMS_KEY_ARN: ${{ secrets.AWS_KMS_SIGNING_KEY_ARN }}
+      PUBLIC_KEYS_BUCKET: ${{ secrets.AWS_PUBLIC_KEYS_BUCKET }}
+    steps:
+      - name: Skip if not configured
+        if: env.SIGNER_ROLE_ARN == ''
+        run: echo "AWS_OIDC_SIGNER_ROLE_ARN not set — publish-signing-key is a no-op until creds land."
+      - uses: actions/checkout@v4
+        if: env.SIGNER_ROLE_ARN != ''
+      - uses: astral-sh/setup-uv@v5
+        if: env.SIGNER_ROLE_ARN != ''
+        with:
+          enable-cache: true
+      - name: Sync
+        if: env.SIGNER_ROLE_ARN != ''
+        run: uv sync --frozen
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: env.SIGNER_ROLE_ARN != ''
+        with:
+          role-to-assume: ${{ env.SIGNER_ROLE_ARN }}
+          aws-region: eu-west-1
+      - name: Publish public key
+        if: env.SIGNER_ROLE_ARN != ''
+        run: |
+          set -euo pipefail
+          uv run manifest-signer publish-key \
+            --key-arn "$KMS_KEY_ARN" \
+            --bucket  "$PUBLIC_KEYS_BUCKET" \
+            --version "${{ inputs.version }}"
