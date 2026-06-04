@@ -1,0 +1,52 @@
+name: code-intake
+
+on:
+  pull_request:
+    branches:
+      - main
+      - "phase-1/**"
+      - "phase-2/**"
+    paths:
+      - "code-intake/**"
+      - "packages/**"
+      - "platform-contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/code-intake.yml"
+  push:
+    branches:
+      - main
+      - "phase-1/**"
+      - "phase-2/**"
+    paths:
+      - "code-intake/**"
+      - "packages/**"
+      - "platform-contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/code-intake.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-generate-package:
+    name: validate + generate-manifest (drift gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Sync
+        run: uv sync --frozen
+      - name: code-intake tests
+        run: uv run pytest code-intake/tests -v --timeout=60 --timeout-method=thread
+      - name: Validate + regenerate manifest for every package, assert byte-stability
+        run: |
+          set -euo pipefail
+          for pkg in packages/*/*/; do
+            uv run code-intake validate --package "$pkg" --strict
+            uv run code-intake generate-manifest --package "$pkg"
+          done
+          git diff --exit-code packages/
