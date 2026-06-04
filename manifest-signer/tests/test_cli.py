@@ -91,6 +91,13 @@ def test_sign_all_second_run_is_idempotent(
     r1 = runner.invoke(main, args)
     r2 = runner.invoke(main, args)
     assert r1.exit_code == 0 and r2.exit_code == 0
+    # First run signs both manifests; second run sees them already in S3
+    # and falls through the `IfNoneMatch="*"` 412 branch. Asserting on
+    # the specific markers proves the idempotency branch actually fired
+    # rather than the test trivially passing on identical exit codes.
+    assert "[signed]" in r1.output
+    assert "[skip-existing]" in r2.output
+    assert "[signed]" not in r2.output
 
 
 def test_verify_online_exits_zero_on_valid(

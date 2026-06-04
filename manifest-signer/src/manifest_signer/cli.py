@@ -230,7 +230,10 @@ def publish_key_cmd(key_arn: str, bucket: str, version: str) -> None:
 
 def _upload_signed_envelope(envelope: dict[str, Any], *, s3_uri: str) -> None:
     """Upload a signed envelope dict to an s3:// URI using IfNoneMatch=\"*\"."""
-    assert s3_uri.startswith("s3://")
+    if not s3_uri.startswith("s3://"):
+        # User-supplied via --upload-to; use a real check that survives
+        # python -O (asserts can be optimised out).
+        raise click.BadParameter(f"--upload-to must be an s3:// URI, got {s3_uri!r}")
     bucket, _, key = s3_uri[5:].partition("/")
     s3 = boto3.client("s3")
     body = json.dumps(envelope, indent=2, ensure_ascii=False).encode("utf-8")
