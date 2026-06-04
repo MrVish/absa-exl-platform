@@ -1,9 +1,9 @@
 {
-  "digest": "fc669bb8f95904990c4cf94c4a6cf8560ff34916ff5800629dfe3fe332719c96",
+  "digest": "4d5c2dc6fa6fa5d90d576f0161fe2cf6e6b748a8c8d1d1be54c5837e3dae98a5",
   "digest_algorithm": "SHA-256",
   "payload": {
     "artifact_hashes": {
-      "model_config_sha256": "1661abf0df2649eecbf2cc5f411de85fad642ac469a5dcbd38796cfde0502418",
+      "model_config_sha256": "1d5f00d878c5c5613735c5f6fccdbd8fe9276acae21e5c369d3afbb074163ddb",
       "registration_sha256": "8dd7c8d2f08135ba218dad64cbd39d07ce4974b01164755d027f345aab52b67a",
       "statemachine_sha256": "3c9c911a53ca91a905fb338651d2955710d4201b165a7472ba0d62383af328d7",
       "terraform_sha256": "a430ec00874eeb07972b034caaf3dc572ea406100e224f029c00061b17a22083"
@@ -13,7 +13,13 @@
     "model_name": "credit-risk-pd",
     "schema_version": 1,
     "tier": "standard",
-    "upstream_refs": [],
+    "upstream_refs": [
+      {
+        "digest": "3b1134c4775a2b58ea8a57888a33e12ec697ea86fe6f905020427dcefabcbdf6",
+        "ref": "credit-risk-pd@1.0.0",
+        "type": "package"
+      }
+    ],
     "version": "1.0.0"
   },
   "signature": "UNSIGNED",
