@@ -106,10 +106,18 @@ def sign_all_cmd(
     signer_principal: str,
     continue_on_error: bool,
 ) -> None:
-    """Discover pipelines/*/*/manifest.json, sign each UNSIGNED one, upload to S3.
+    """Discover <root>/*/*/manifest.json, sign each UNSIGNED one, upload to S3.
 
-    Derives <name>/<version> from the manifest payload (not the file path) for
-    robustness. Treats S3 412 PreconditionFailed as success (idempotent re-run).
+    The S3 key includes a top-level prefix derived from the envelope's
+    ``subject_type`` field: ``packages/...`` for ``subject_type == "package"``,
+    ``pipelines/...`` otherwise. This keeps package + pipeline manifests with
+    the same ``model_name``/``version`` from colliding on the same S3 key (a
+    silent failure mode pre-fix: the second upload returned 412
+    PreconditionFailed which the idempotency story masks as success).
+
+    Derives ``<name>/<version>`` from the manifest payload (not the file path)
+    for robustness. Treats S3 412 PreconditionFailed as success (idempotent
+    re-run).
     """
     kms = boto3.client("kms")
     s3 = boto3.client("s3")
@@ -133,7 +141,14 @@ def sign_all_cmd(
             )
             name = signed["payload"]["model_name"]
             version = signed["payload"]["version"]
-            s3_key = f"{name}/{version}/manifest.json"
+            # Namespace by subject_type so packages/<name>/<ver>/manifest.json
+            # and pipelines/<name>/<ver>/manifest.json don't collide on the
+            # same S3 key. The fallback to "pipeline" preserves backward
+            # compatibility with any legacy envelope missing subject_type —
+            # the schema requires it, so this is defense-in-depth.
+            subject_type = signed.get("subject_type", "pipeline")
+            prefix = "packages" if subject_type == "package" else "pipelines"
+            s3_key = f"{prefix}/{name}/{version}/manifest.json"
 
             try:
                 s3.put_object(

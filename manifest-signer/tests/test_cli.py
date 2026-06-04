@@ -98,11 +98,12 @@ def test_sign_all_signs_unsigned_uploads_skips_existing(
         ],
     )
     assert result.exit_code == 0, result.output
-    # Both manifests uploaded
+    # Both manifests uploaded under the `pipelines/` prefix derived from the
+    # envelope's subject_type field.
     objs = s3_client.list_objects_v2(Bucket=bucket)
     keys = {o["Key"] for o in objs.get("Contents", [])}
-    assert "credit-risk-pd/1.0.0/manifest.json" in keys
-    assert "fraud-detection/0.1.0/manifest.json" in keys
+    assert "pipelines/credit-risk-pd/1.0.0/manifest.json" in keys
+    assert "pipelines/fraud-detection/0.1.0/manifest.json" in keys
 
 
 def test_sign_all_second_run_is_idempotent(
@@ -138,6 +139,95 @@ def test_sign_all_second_run_is_idempotent(
     assert "[signed]" in r1.output
     assert "[skip-existing]" in r2.output
     assert "[signed]" not in r2.output
+
+
+def test_sign_all_packages_and_pipelines_dont_collide_on_s3_key(
+    runner,
+    packages_and_pipelines_tree,
+    signing_key,
+    kms_client,
+    s3_client,
+):
+    """Regression test for the T15-surfaced bug: when both packages/<name>/<ver>
+    and pipelines/<name>/<ver> exist with the SAME model_name + version, the
+    pre-fix sign-all derived s3_key purely from payload, producing identical
+    keys. The second upload returned 412 PreconditionFailed which the signer
+    silently treats as success — net effect: the pipeline manifest never
+    landed in S3.
+
+    The fix namespaces s3_key by envelope.subject_type so both manifests land
+    at distinct S3 paths matching the on-disk structure.
+    """
+    packages_root, pipelines_root, _ = packages_and_pipelines_tree
+    bucket = "test-signed-manifests"
+    s3_client.create_bucket(
+        Bucket=bucket,
+        CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
+    )
+
+    # Sign packages first (matches T15's CI loop order: `for root in packages pipelines`).
+    r1 = runner.invoke(
+        main,
+        [
+            "sign-all",
+            "--root",
+            str(packages_root),
+            "--key-arn",
+            signing_key["Arn"],
+            "--upload-to-bucket",
+            bucket,
+            "--signer-principal",
+            "test-principal",
+        ],
+    )
+    assert r1.exit_code == 0, r1.output
+    assert "[signed]" in r1.output
+
+    # Then sign pipelines.
+    r2 = runner.invoke(
+        main,
+        [
+            "sign-all",
+            "--root",
+            str(pipelines_root),
+            "--key-arn",
+            signing_key["Arn"],
+            "--upload-to-bucket",
+            bucket,
+            "--signer-principal",
+            "test-principal",
+        ],
+    )
+    assert r2.exit_code == 0, r2.output
+    # Pre-fix: this would print "[skip-existing]" because the package's
+    # s3_key already exists. Post-fix: a fresh "[signed]" because the
+    # pipeline lands at a distinct key.
+    assert "[signed]" in r2.output, (
+        "Pipeline manifest collided with package manifest on the same S3 key. "
+        f"r2.output={r2.output!r}"
+    )
+    assert "[skip-existing]" not in r2.output
+
+    # Both manifests must be present at their namespaced S3 keys.
+    objs = s3_client.list_objects_v2(Bucket=bucket)
+    keys = {o["Key"] for o in objs.get("Contents", [])}
+    assert "packages/credit-risk-pd/1.0.0/manifest.json" in keys, (
+        f"Expected package manifest at packages/ prefix; got keys={keys}"
+    )
+    assert "pipelines/credit-risk-pd/1.0.0/manifest.json" in keys, (
+        f"Expected pipeline manifest at pipelines/ prefix; got keys={keys}"
+    )
+
+    # And their subject_type fields must round-trip correctly: pulling the
+    # objects back should give one package, one pipeline.
+    pkg_body = s3_client.get_object(
+        Bucket=bucket, Key="packages/credit-risk-pd/1.0.0/manifest.json"
+    )["Body"].read()
+    pipe_body = s3_client.get_object(
+        Bucket=bucket, Key="pipelines/credit-risk-pd/1.0.0/manifest.json"
+    )["Body"].read()
+    assert json.loads(pkg_body)["subject_type"] == "package"
+    assert json.loads(pipe_body)["subject_type"] == "pipeline"
 
 
 def test_verify_online_exits_zero_on_valid(
