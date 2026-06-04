@@ -1,5 +1,5 @@
 {
-  "digest": "c3b28c5680d669008a3dcddc4905f875d43dadfc36958c2a97889cb8677226d0",
+  "digest": "fc669bb8f95904990c4cf94c4a6cf8560ff34916ff5800629dfe3fe332719c96",
   "digest_algorithm": "SHA-256",
   "payload": {
     "artifact_hashes": {
@@ -13,6 +13,7 @@
     "model_name": "credit-risk-pd",
     "schema_version": 1,
     "tier": "standard",
+    "upstream_refs": [],
     "version": "1.0.0"
   },
   "signature": "UNSIGNED",

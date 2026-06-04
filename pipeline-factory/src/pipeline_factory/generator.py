@@ -10,6 +10,7 @@ from platform_contracts.loader import validate as validate_contract
 from .hashing import canonical_json, sha256_of_text, terraform_fmt
 from .manifest import build_envelope, build_payload
 from .renderer import render_pipeline_tf, render_statemachine
+from .upstream_resolver import resolve_upstream_refs
 
 OUTPUTS_ROOT = Path("pipelines")
 
@@ -99,6 +100,11 @@ def generate(
     tier: str = config["execution_tier"]
     out_dir = outputs_root / model_name / version
 
+    upstream_refs = resolve_upstream_refs(
+        upstream_package=config.get("upstream_package"),
+        packages_root=Path("packages"),
+    )
+
     statemachine_json = render_statemachine(tier, {"model": _model_context(config)})
     pipeline_tf_raw = render_pipeline_tf({"tier": tier, "model": _model_context(config)})
     pipeline_tf = terraform_fmt(pipeline_tf_raw)
@@ -118,6 +124,7 @@ def generate(
         tier=tier,
         artifact_hashes=artifact_hashes,
         generated_at=existing_generated_at,
+        upstream_refs=upstream_refs,
     )
     envelope = build_envelope(
         payload=payload,
