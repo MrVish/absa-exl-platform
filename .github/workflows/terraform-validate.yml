@@ -87,6 +87,7 @@ jobs:
           - terraform/account-bootstrap/exl-dev
           - terraform/account-bootstrap/exl-stg
           - terraform/account-bootstrap/exl-prod
+          - pipelines/credit-risk-pd/1.0.0/terraform
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
