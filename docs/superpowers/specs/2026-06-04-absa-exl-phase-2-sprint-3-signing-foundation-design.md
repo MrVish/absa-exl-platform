@@ -45,9 +45,7 @@ The split mirrors the earlier decomposition of Phase 2 itself into three sub-spr
    - `exl-platform-signed-manifests` — versioned, SSE-S3, bucket-owner-enforced object ownership, all four public-access-block flags `true`. Stores the audit-grade signed envelope at `<name>/<version>/manifest.json`.
    - `exl-platform-public-keys` — versioned, SSE-S3, bucket-owner-enforced, `block_public_policy = false` and `restrict_public_buckets = false` so a scoped read policy can apply. Bucket policy grants `s3:GetObject` to `Principal: "*"` on the `manifest-signing/*` prefix only. Stores the published public key at `manifest-signing/<key_id>/<version>.pem`.
 6. **`manifest-signer` uv workspace member.** Four modules — `signer.py`, `verifier.py`, `publisher.py`, `cli.py` — with a Click CLI exposing `sign`, `sign-all`, `verify-online`, `verify-offline`, `publish-key`. Online verifier uses `kms:Verify`; offline verifier uses `cryptography` against a PEM-encoded public key — both code paths required by ADR-0003 and exercised by tests.
-7. **Two small refactors of prior sprint code:**
-   - Move `canonical_json` from `pipeline-factory/src/pipeline_factory/hashing.py` to `platform-contracts/src/platform_contracts/canonical.py`. The canonicalisation rules belong to the envelope contract, not to any one consumer. `pipeline-factory`'s internal imports update accordingly.
-   - Add a `writer_policy_arn` output to the existing `pipeline-registry` Terraform module so the new registrar role can attach the existing writer policy by ARN. Pure-additive change.
+7. **One small refactor of prior sprint code:** move `canonical_json` from `pipeline-factory/src/pipeline_factory/hashing.py` to `platform-contracts/src/platform_contracts/canonical.py`. The canonicalisation rules belong to the envelope contract, not to any one consumer. `pipeline-factory`'s internal imports update accordingly. The `writer_policy_arn` output on the `pipeline-registry` module already exists from Sprint 1 ([`outputs.tf:41-44`](terraform/modules/pipeline-registry/outputs.tf)); the new registrar role attaches to it via `terraform_remote_state` lookup.
 8. **CI signing step.** New `sign` job inserted between the existing `drift-gate` and `register` jobs in `.github/workflows/pipeline-factory.yml`. Runs on push to `main` only, gated by `vars.AWS_SIGNER_ROLE_ARN != ''`. Assumes the signer role via OIDC, calls `manifest-signer sign-all`, uploads signed envelopes to S3. Concurrency group prevents back-to-back merges racing. `register` then runs with `needs: sign`.
 9. **Key-publication workflow.** New `.github/workflows/publish-signing-key.yml` (manual `workflow_dispatch`) runs `manifest-signer publish-key` to upload the CMK's public key to the public-keys bucket. One-shot after first apply; re-run on each rotation.
 10. **ADR-0009 — Signing Foundation Topology** (new) and a minor edit to ADR-0003 (point to concrete bucket names + cross-reference 0009).
@@ -204,10 +202,10 @@ pyproject.toml (root)                             # add "manifest-signer" to wor
 
 ### 5.2 Refactor notes (`canonical_json` move)
 
-Currently `pipeline_factory.hashing.canonical_json` does deterministic JSON encoding for Sprint 2's manifest builder: `json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")`. We move it to `platform_contracts.canonical.canonical_json` because the encoding rules belong to the envelope contract — both producers (Pipeline Factory, future Code Intake) and consumers (signer, verifier) need to agree on them.
+Currently `pipeline_factory.hashing.canonical_json` does deterministic JSON encoding for Sprint 2's manifest builder: `json.dumps(obj, sort_keys=True, indent=2, ensure_ascii=False).encode("utf-8") + b"\n"`. (Pretty-printed sort-keys form with a trailing newline — chosen for human-readability of the committed manifest file; the digest is over the byte output, so the format choice is fixed by Sprint 2's existing manifests.) We move it to `platform_contracts.canonical.canonical_json` because the encoding rules belong to the envelope contract — both producers (Pipeline Factory, future Code Intake) and consumers (signer, verifier) need to agree on them byte-for-byte.
 
 Mechanics:
-- New module `platform-contracts/src/platform_contracts/canonical.py` with the same function (and the same docstring referencing the JSON-Canonicalisation-Scheme-compatible rules we already use).
+- New module `platform-contracts/src/platform_contracts/canonical.py` with the same function (verbatim — the implementation is the contract).
 - `pipeline-factory/src/pipeline_factory/hashing.py` loses the `canonical_json` definition; its internal callers (`manifest.py`, `generator.py`, `renderer.py`) update their imports to `from platform_contracts.canonical import canonical_json`.
 - `pipeline-factory/pyproject.toml` has `platform-contracts` as a workspace dependency already (from Sprint 2); no dependency change.
 - `manifest-signer/pyproject.toml` adds `platform-contracts` as a workspace dependency.
@@ -215,18 +213,9 @@ Mechanics:
 
 No external consumer imports `pipeline_factory.hashing.canonical_json` today (verified during Sprint 2 design); no backwards-compatibility shim required.
 
-### 5.3 Refactor notes (`writer_policy_arn` output)
+### 5.3 Pre-existing `writer_policy_arn` output
 
-Sprint 1's `pipeline-registry` Terraform module already defines `aws_iam_policy.registry_writer` (or equivalent — the resource granting `execute-api:Invoke` on the POST/PATCH routes). We add one output:
-
-```hcl
-output "writer_policy_arn" {
-  description = "ARN of the IAM policy granting writer access to the registry API. Attach to roles that need to POST/PATCH pipelines."
-  value       = aws_iam_policy.registry_writer.arn
-}
-```
-
-The Sprint 3 `signing-foundation` module declares `var.writer_policy_arn` and uses it via `aws_iam_role_policy_attachment`. Per-env stacks wire the two together with a `data "terraform_remote_state"` lookup against the registry stack's output (or, more simply, by passing the value directly via `tfvars` once the registry stack is applied).
+Sprint 1's `pipeline-registry` module already exports `output "writer_policy_arn"` at `terraform/modules/pipeline-registry/outputs.tf:41-44` (the IAM policy itself is `aws_iam_policy.writer`). The Sprint 3 `signing-foundation` module declares `var.writer_policy_arn` and uses it via `aws_iam_role_policy_attachment`; the per-env `exl-prod/signing` stack reads the value via `data "terraform_remote_state"` lookup against the registry stack's output. No changes required to the `pipeline-registry` module itself.
 
 ---
 
@@ -863,7 +852,7 @@ This sprint is done when:
 2. `terraform validate` + `tflint` + `tfsec` pass on the new module and the `exl-prod/signing` stack. The one `tfsec` suppression is annotated with a comment referencing ADR-0009.
 3. `actionlint` passes on the modified `pipeline-factory.yml` and the new `publish-signing-key.yml`.
 4. The `canonical_json` move lands without breaking Sprint 2: `test_canonical_compat.py` proves byte-identical encoding; Sprint 2's existing tests still pass after the import updates.
-5. `pipeline-registry`'s new `writer_policy_arn` output is consumable by an external module reference (verified by the `signing-foundation` module's `terraform validate`).
+5. `pipeline-registry`'s existing `writer_policy_arn` output is consumed by the `signing-foundation` module via `terraform_remote_state` (verified by `terraform validate` on the `exl-prod/signing` stack).
 6. ADR-0009 is committed; ADR-0003 has the storage-layout edit.
 7. READMEs exist for `manifest-signer/` (usage examples) and `terraform/modules/signing-foundation/` (input/output reference).
 8. The final review pass (subagent-driven code reviewer at the end of execution) finds no blocking issues.
@@ -875,7 +864,7 @@ This sprint is done when:
 
 After this spec is reviewed and approved, the writing-plans skill produces a tasked implementation plan covering:
 
-- The two refactors (`canonical_json` move, `writer_policy_arn` output) — done first so subsequent tasks can depend on them.
+- The `canonical_json` refactor — done first so subsequent tasks import from the new home.
 - The `manifest-signer` Python package, built bottom-up: errors → canonical compat test → signer → online verifier → offline verifier → publisher → CLI commands → end-to-end test.
 - The Terraform module: KMS → IAM (OIDC + signer + registrar) → S3 buckets → variables/outputs.
 - The per-env `exl-prod/signing` stack.
