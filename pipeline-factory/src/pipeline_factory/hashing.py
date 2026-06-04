@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import subprocess
+import tempfile
 from typing import Any
 
 
@@ -28,20 +29,33 @@ def sha256_of_json(obj: Any) -> str:
 
 
 def terraform_fmt(text: str) -> str:
-    """Run ``terraform fmt -`` on *text* and return the formatted output.
+    """Run ``terraform fmt`` on *text* and return the formatted output.
 
-    Requires the ``terraform`` binary on PATH. Disables Hashicorp's checkpoint
-    telemetry (which can hang in restricted CI networks) and enforces a 30s
-    timeout as a defense-in-depth against future subprocess hangs.
+    Writes the input to a temporary ``.tf`` file (avoids stdin EOF handling
+    differences across terraform versions / platforms — the stdin form
+    hangs in some CI environments), invokes ``terraform fmt`` on the file,
+    then reads it back. Disables Hashicorp's checkpoint telemetry and
+    enforces a 30s timeout as defense-in-depth.
+
+    Requires the ``terraform`` binary on PATH.
     """
     env = {**os.environ, "CHECKPOINT_DISABLE": "1", "TF_IN_AUTOMATION": "1"}
-    completed = subprocess.run(
-        ["terraform", "fmt", "-"],
-        input=text,
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=30,
-        env=env,
-    )
-    return completed.stdout
+    fd, tmp_path = tempfile.mkstemp(suffix=".tf", text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fp:
+            fp.write(text)
+        subprocess.run(
+            ["terraform", "fmt", tmp_path],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+            env=env,
+        )
+        with open(tmp_path, encoding="utf-8") as fp:
+            result = fp.read()
+        # terraform fmt on a file strips the final newline on some versions;
+        # normalise to always end with exactly one newline (matching stdin behaviour).
+        return result if result.endswith("\n") else result + "\n"
+    finally:
+        os.unlink(tmp_path)
