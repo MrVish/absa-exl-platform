@@ -1,0 +1,92 @@
+name: pipeline-factory
+
+on:
+  pull_request:
+    branches:
+      - main
+      - "phase-1/**"
+      - "phase-2/**"
+    paths:
+      - "pipeline-factory/**"
+      - "pipelines/**"
+      - "platform-contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/pipeline-factory.yml"
+  push:
+    branches:
+      - main
+      - "phase-1/**"
+      - "phase-2/**"
+    paths:
+      - "pipeline-factory/**"
+      - "pipelines/**"
+      - "platform-contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/pipeline-factory.yml"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  validate-and-generate:
+    name: validate + generate (drift gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+      - name: Sync
+        run: uv sync --frozen
+      - name: Pipeline-factory tests
+        run: uv run pytest pipeline-factory/tests -v --timeout=60 --timeout-method=thread
+      - name: Regenerate every fixture and assert byte-stability
+        run: |
+          set -euo pipefail
+          for config in pipeline-factory/configs/*/*/model_config.yaml; do
+            uv run generate-pipeline generate --config "$config" --force
+          done
+          git diff --exit-code pipelines/
+
+  register:
+    name: register (POST to Registry API)
+    needs: validate-and-generate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      ROLE_ARN: ${{ secrets.AWS_OIDC_REGISTRAR_ROLE_ARN }}
+      REGISTRY_API_ENDPOINT: ${{ secrets.REGISTRY_API_ENDPOINT }}
+    steps:
+      - name: Skip if not configured
+        if: env.ROLE_ARN == ''
+        run: echo "AWS_OIDC_REGISTRAR_ROLE_ARN not set — register step is a no-op until creds land."
+      - uses: actions/checkout@v4
+        if: env.ROLE_ARN != ''
+      - uses: astral-sh/setup-uv@v5
+        if: env.ROLE_ARN != ''
+        with:
+          enable-cache: true
+      - name: Sync
+        if: env.ROLE_ARN != ''
+        run: uv sync --frozen
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: env.ROLE_ARN != ''
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: eu-west-1
+      - name: Register every committed pipeline
+        if: env.ROLE_ARN != ''
+        run: |
+          set -euo pipefail
+          for reg in pipelines/*/*/registration.json; do
+            pipeline=$(echo "$reg" | sed -E 's|pipelines/([^/]+)/([^/]+)/registration.json|\1@\2|')
+            echo "Registering $pipeline"
+            uv run generate-pipeline register --pipeline "$pipeline"
+          done

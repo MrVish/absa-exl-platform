@@ -5,6 +5,8 @@ on:
     paths:
       - "platform-contracts/**"
       - "registry/**"
+      - "pipeline-factory/**"
+      - "pipelines/**"
       - "pyproject.toml"
       - "uv.lock"
       - ".python-version"
@@ -15,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -25,9 +30,9 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
       - name: Types
-        run: uv run mypy platform-contracts/src registry/api/src
+        run: uv run mypy platform-contracts/src registry/api/src pipeline-factory/src
       - name: Tests
-        run: uv run pytest
+        run: uv run pytest -v --timeout=60 --timeout-method=thread
       - name: Contract model drift check
         run: |
           bash platform-contracts/regenerate-models.sh

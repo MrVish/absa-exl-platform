@@ -21,6 +21,8 @@
     "accountable_executive": { "type": "string", "minLength": 1 },
     "sla_seconds": { "type": "integer", "exclusiveMinimum": 0 },
     "model_class": { "type": "string", "enum": ["credit", "fraud", "propensity", "other"] },
-    "registry_lookup_key": { "type": "string" }
+    "registry_lookup_key": { "type": "string" },
+    "sas_code_version": { "type": "string", "minLength": 1 },
+    "inference_code_version": { "type": "string", "minLength": 1 }
   }
 }

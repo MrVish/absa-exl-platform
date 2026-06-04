@@ -37,6 +37,15 @@
 | **SOC 2 CC6.1 — recoverability of evidence** | DynamoDB PITR on the registry table | `terraform/modules/pipeline-registry/main.tf` (point_in_time_recovery) | EXL Platform Engineering |
 | **ABSA GMRMG — model inventory + ownership** | Authoritative registry record with owner, accountable executive, SLA per model version | `platform-contracts/src/platform_contracts/schemas/registry-record.schema.json` | ABSA Model Risk |
 
+## Phase 2 controls (sprint 2 — Pipeline Factory)
+
+| Control | Implementation | Evidence artifact | Owner |
+| --- | --- | --- | --- |
+| **SR 11-7 III.1 — model documentation** | Per-version immutable artifact directories committed in git (model_config + state machine + registration + manifest + terraform) | `pipelines/<name>/<version>/`, `pipeline-factory/configs/<name>/<version>/model_config.yaml` | EXL Platform Engineering |
+| **SR 11-7 III.4 — model implementation evidence** | API-routed registration preserves the audit log + approval gate from 2.1; CI is the only POST path (per ADR-0008) | `.github/workflows/pipeline-factory.yml` (`register` job), `pipeline-factory/src/pipeline_factory/registration.py` | EXL Platform Engineering |
+| **SARB GOI 3 — model risk governance** | The generator can only create `pending` records; CAB + IVU still required to flip to `approved` (gate is server-side in the Registry API) | `registry/api/src/registry_api/transitions.py`, `pipeline-factory/src/pipeline_factory/registration.py` | ABSA Model Risk |
+| **ISO 27001 A.14.2 — secure development** | Drift gate (CI re-render + `git diff --exit-code`) + golden-file tests ensure generated artifacts are reproducible bit-for-bit | `.github/workflows/pipeline-factory.yml`, `pipeline-factory/tests/test_golden_fixture.py` | EXL Platform Engineering |
+
 ## Out-of-matrix items (deferred)
 
 The following control rows belong to later phases and will be added to this matrix when the corresponding modules land:

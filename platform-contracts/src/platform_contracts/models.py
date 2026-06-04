@@ -58,6 +58,33 @@ class ModelConfig(ContractBase):
     sla_seconds: Annotated[int, Field(gt=0)]
     model_class: ModelClass | None = None
     registry_lookup_key: str | None = None
+    sas_code_version: Annotated[str | None, Field(min_length=1)] = None
+    inference_code_version: Annotated[str | None, Field(min_length=1)] = None
+
+class Tier(StrEnum):
+    standard = 'standard'
+    scalable = 'scalable'
+
+class ArtifactHashes(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    statemachine_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
+    terraform_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
+    model_config_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
+    registration_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
+
+class PipelineManifestPayload(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    schema_version: Literal[1]
+    generator_version: Annotated[str, Field(pattern='^\\d+\\.\\d+\\.\\d+$')]
+    model_name: Annotated[str, Field(pattern='^[a-z][a-z0-9-]{2,63}$')]
+    version: Annotated[str, Field(pattern='^\\d+\\.\\d+\\.\\d+$')]
+    tier: Tier
+    generated_at: AwareDatetime
+    artifact_hashes: ArtifactHashes
 
 class ApprovalStatus(StrEnum):
     pending = 'pending'

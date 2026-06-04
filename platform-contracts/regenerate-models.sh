@@ -15,9 +15,10 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 # --- Generate each schema individually so the output is a plain .py file ---
 SCHEMAS=(
-  "model-config.schema.json"
-  "registry-record.schema.json"
   "manifest-envelope.schema.json"
+  "model-config.schema.json"
+  "pipeline-manifest-payload.schema.json"
+  "registry-record.schema.json"
 )
 
 for schema in "${SCHEMAS[@]}"; do

@@ -1,0 +1,141 @@
+{
+  "Comment": "{{ model.name }}@{{ model.version }} — scalable-batch tier",
+  "StartAt": "ValidateInput",
+  "States": {
+    "ValidateInput": {
+      "Type": "Task",
+      "Resource": "${ValidateInputLambdaArn}",
+      "Parameters": {
+        "modelName": "{{ model.name }}",
+        "modelVersion": "{{ model.version }}",
+        "inputSchemaRef": "{{ model.input_schema_ref }}"
+      },
+      "Retry": [
+        { "ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 4, "MaxAttempts": 3, "BackoffRate": 2 }
+      ],
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "NotifyFailure", "ResultPath": "$.error" }
+      ],
+      "Next": "DataQuality"
+    },
+    "DataQuality": {
+      "Type": "Task",
+      "Resource": "${GreatExpectationsRunnerArn}",
+      "Parameters": {
+        "modelName": "{{ model.name }}",
+        "modelVersion": "{{ model.version }}"
+      },
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "NotifyFailure", "ResultPath": "$.error" }
+      ],
+      "Next": "Score"
+    },
+    "Score": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::eks:runJob.sync",
+      "Parameters": {
+        "ClusterName": "${EksClusterName}",
+        "Namespace": "${EksScoringNamespace}",
+        "Job": {
+          "apiVersion": "batch/v1",
+          "kind": "Job",
+          "metadata": {
+            "name.$": "States.Format('{{ model.name }}-{{ model.version }}-{}', $$.Execution.Name)"
+          },
+          "spec": {
+            "template": {
+              "spec": {
+                "containers": [
+                  {
+                    "name": "score",
+                    "image": "${ScoringImageUri}",
+                    "args": [
+                      "--model-name", "{{ model.name }}",
+                      "--model-version", "{{ model.version }}",
+                      "--input-uri", "$.inputUri",
+                      "--output-uri", "$.outputUri"
+                    ]
+                  }
+                ],
+                "restartPolicy": "Never"
+              }
+            },
+            "backoffLimit": 2
+          }
+        }
+      },
+      "Catch": [
+        { "ErrorEquals": ["States.ALL"], "Next": "NotifyFailure", "ResultPath": "$.error" }
+      ],
+      "Next": "WriteOutput"
+    },
+    "WriteOutput": {
+      "Type": "Task",
+      "Resource": "${WriteOutputLambdaArn}",
+      "Parameters": {
+        "outputSchemaRef": "{{ model.output_schema_ref }}",
+        "outputUri.$": "$.outputUri"
+      },
+      "Next": "PIRVariance"
+    },
+    "PIRVariance": {
+      "Type": "Task",
+      "Resource": "${PirCheckerArn}",
+      "Parameters": {
+        "modelName": "{{ model.name }}",
+        "modelVersion": "{{ model.version }}",
+        "pirDocRef": "{{ model.pir_doc_ref }}",
+        "scoreUri.$": "$.outputUri"
+      },
+      "Next": "VarianceDecision"
+    },
+    "VarianceDecision": {
+      "Type": "Choice",
+      "Choices": [
+        { "Variable": "$.varianceWithinThreshold", "BooleanEquals": true, "Next": "Notify" }
+      ],
+      "Default": "BlockDelivery"
+    },
+    "Notify": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${NotifyTopicArn}",
+        "Message.$": "$"
+      },
+      "End": true
+    },
+    "BlockDelivery": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${NotifyTopicArn}",
+        "Message": {
+          "status": "BLOCKED",
+          "reason": "PIR variance exceeded threshold",
+          "modelName": "{{ model.name }}",
+          "modelVersion": "{{ model.version }}"
+        }
+      },
+      "End": true
+    },
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${NotifyTopicArn}",
+        "Message": {
+          "status": "FAILED",
+          "modelName": "{{ model.name }}",
+          "modelVersion": "{{ model.version }}",
+          "error.$": "$.error"
+        }
+      },
+      "Next": "Fail"
+    },
+    "Fail": {
+      "Type": "Fail",
+      "Cause": "Pipeline failed; see audit log"
+    }
+  }
+}
