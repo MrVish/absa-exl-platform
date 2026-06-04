@@ -69,3 +69,23 @@ def test_generate_manifest_refuses_on_validation_failure(runner, tmp_path):
     result = runner.invoke(main, ["generate-manifest", "--package", str(pkg)])
     assert result.exit_code == 1
     assert not (pkg / "manifest.json").exists()
+
+
+def test_generate_manifest_is_byte_stable_on_rerender(runner, tmp_path):
+    """The CLI's `_read_existing_manifest_timestamps` is what makes the
+    drift gate work — re-rendering must produce byte-identical output.
+    Without this test a regression that breaks timestamp preservation
+    (e.g. someone changes the key from payload.generated_at to
+    generated_at) would silently break the drift gate."""
+    import shutil
+
+    pkg = tmp_path / "pkg"
+    shutil.copytree(FIXTURES / "valid_package", pkg)
+
+    assert runner.invoke(main, ["generate-manifest", "--package", str(pkg)]).exit_code == 0
+    first = (pkg / "manifest.json").read_bytes()
+
+    assert runner.invoke(main, ["generate-manifest", "--package", str(pkg)]).exit_code == 0
+    second = (pkg / "manifest.json").read_bytes()
+
+    assert first == second, "re-rendering produced different bytes; drift gate would fail"
