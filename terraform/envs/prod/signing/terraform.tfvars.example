@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in. The values are sourced from upstream
+# Terraform stacks; run `terraform output` against each producer to fetch them.
+
+repo_full_name = "MrVish/absa-exl-platform"
+
+# From: terraform -chdir=terraform/account-bootstrap/exl-prod output platform_engineer_role_arn
+key_admin_principals = [
+  "arn:aws:iam::000000000000:role/prod-platform-engineer", # replace with real account ID + role
+]
+
+# From: terraform -chdir=terraform/account-bootstrap/exl-prod output github_oidc_provider_arn
+github_oidc_provider_arn = "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com"
+
+# From: terraform -chdir=terraform/envs/prod/registry output writer_policy_arn
+# (registry/outputs.tf must exist - this sprint adds it.)
+writer_policy_arn = "arn:aws:iam::000000000000:policy/<registry-writer-policy-name>"
+
+# Populated post-ABSA handoff. Empty until then.
+absa_verifier_principals = []
