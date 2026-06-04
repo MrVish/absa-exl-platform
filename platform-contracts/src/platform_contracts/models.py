@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Annotated, Any, Literal
 
 from platform_contracts._base import ContractBase
@@ -132,7 +132,7 @@ class ArtifactHashes(ContractBase):
     model_config_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
     registration_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
 
-class UpstreamRefType(Enum):
+class UpstreamRefType(StrEnum):
     package = 'package'
 
 class UpstreamRef(ContractBase):
@@ -162,7 +162,7 @@ class PipelineManifestPayload(ContractBase):
         ),
     ] = []
 
-class PirDataType(Enum):
+class PirDataType(StrEnum):
     string = 'string'
     int = 'int'
     float = 'float'

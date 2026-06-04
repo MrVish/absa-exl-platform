@@ -35,6 +35,7 @@
   },
   "$defs": {
     "UpstreamRefType": {
+      "type": "string",
       "enum": ["package"]
     },
     "upstream_ref": {

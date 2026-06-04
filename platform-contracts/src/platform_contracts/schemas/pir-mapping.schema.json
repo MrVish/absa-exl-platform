@@ -21,6 +21,7 @@
   },
   "$defs": {
     "PirDataType": {
+      "type": "string",
       "enum": ["string","int","float","bool","date","datetime","decimal"]
     },
     "pir_input": {

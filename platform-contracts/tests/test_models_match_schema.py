@@ -7,6 +7,8 @@ CASES = [
     ("registry-record", "RegistryRecord"),
     ("manifest-envelope", "ManifestEnvelope"),
     ("pipeline-manifest-payload", "PipelineManifestPayload"),
+    ("package-manifest-payload", "PackageManifestPayload"),
+    ("pir-mapping", "PirMapping"),
 ]
 
 
