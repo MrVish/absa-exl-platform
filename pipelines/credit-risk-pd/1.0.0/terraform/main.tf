@@ -37,20 +37,6 @@ variable "pir_checker_arn" {
   type        = string
   description = "ARN of the Lambda that performs PIR variance checking."
 }
-{% if tier == "scalable" %}
-variable "eks_cluster_name" {
-  type        = string
-  description = "Name of the EKS cluster used for scalable-tier inference."
-}
-variable "eks_scoring_namespace" {
-  type        = string
-  description = "Kubernetes namespace in which the scoring job runs."
-}
-variable "scoring_image_uri" {
-  type        = string
-  description = "ECR image URI for the scalable-tier scoring container."
-}
-{% endif %}
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to every resource. Must include cost_center."
@@ -65,7 +51,7 @@ provider "aws" {
 }
 
 locals {
-  name = "${var.env}-{{ model.name }}-{{ model.version | replace('.', '-') }}"
+  name = "${var.env}-credit-risk-pd-1-0-0"
 
   asl_substitutions = merge(
     {
@@ -75,15 +61,7 @@ locals {
       PirCheckerArn              = var.pir_checker_arn
       NotifyTopicArn             = var.notify_topic_arn
     },
-{% if tier == "scalable" %}
-    {
-      EksClusterName      = var.eks_cluster_name
-      EksScoringNamespace = var.eks_scoring_namespace
-      ScoringImageUri     = var.scoring_image_uri
-    }
-{% else %}
     {}
-{% endif %}
   )
 }
 
@@ -143,7 +121,7 @@ resource "aws_sfn_state_machine" "this" {
 
 resource "aws_cloudwatch_event_rule" "schedule" {
   name                = "${local.name}-schedule"
-  schedule_expression = "{{ model.schedule_cadence }}"
+  schedule_expression = "cron(0 6 * * ? *)"
   tags                = var.tags
 }
 

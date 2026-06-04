@@ -1,0 +1,16 @@
+{
+  "accountable_executive": "Jane Exec",
+  "cab_record_id": null,
+  "execution_tier": "standard",
+  "inference_code_version": "py-2026.04.1",
+  "input_schema_ref": "s3://absa-exl/schemas/credit-risk-pd/1.0.0/input.json",
+  "ivu_evidence_ref": null,
+  "model_name": "credit-risk-pd",
+  "output_schema_ref": "s3://absa-exl/schemas/credit-risk-pd/1.0.0/output.json",
+  "owner_email": "model.owner@absa.africa",
+  "pir_doc_ref": "s3://absa-exl/pir/credit-risk-pd/1.0.0/pir-evidence.json",
+  "sas_code_version": "sas-2026.04.1",
+  "schedule_cadence": "cron(0 6 * * ? *)",
+  "sla_seconds": 3600,
+  "version": "1.0.0"
+}

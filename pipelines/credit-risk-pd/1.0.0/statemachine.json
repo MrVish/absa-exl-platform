@@ -1,0 +1,158 @@
+{
+  "Comment": "credit-risk-pd@1.0.0 — standard-batch tier",
+  "StartAt": "ValidateInput",
+  "States": {
+    "BlockDelivery": {
+      "End": true,
+      "Parameters": {
+        "Message": {
+          "modelName": "credit-risk-pd",
+          "modelVersion": "1.0.0",
+          "reason": "PIR variance exceeded threshold",
+          "status": "BLOCKED"
+        },
+        "TopicArn": "${NotifyTopicArn}"
+      },
+      "Resource": "arn:aws:states:::sns:publish",
+      "Type": "Task"
+    },
+    "DataQuality": {
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "NotifyFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "Score",
+      "Parameters": {
+        "modelName": "credit-risk-pd",
+        "modelVersion": "1.0.0"
+      },
+      "Resource": "${GreatExpectationsRunnerArn}",
+      "Type": "Task"
+    },
+    "Fail": {
+      "Cause": "Pipeline failed; see audit log",
+      "Type": "Fail"
+    },
+    "Notify": {
+      "End": true,
+      "Parameters": {
+        "Message.$": "$",
+        "TopicArn": "${NotifyTopicArn}"
+      },
+      "Resource": "arn:aws:states:::sns:publish",
+      "Type": "Task"
+    },
+    "NotifyFailure": {
+      "Next": "Fail",
+      "Parameters": {
+        "Message": {
+          "error.$": "$.error",
+          "modelName": "credit-risk-pd",
+          "modelVersion": "1.0.0",
+          "status": "FAILED"
+        },
+        "TopicArn": "${NotifyTopicArn}"
+      },
+      "Resource": "arn:aws:states:::sns:publish",
+      "Type": "Task"
+    },
+    "PIRVariance": {
+      "Next": "VarianceDecision",
+      "Parameters": {
+        "modelName": "credit-risk-pd",
+        "modelVersion": "1.0.0",
+        "pirDocRef": "s3://absa-exl/pir/credit-risk-pd/1.0.0/pir-evidence.json",
+        "scoreUri.$": "$.outputUri"
+      },
+      "Resource": "${PirCheckerArn}",
+      "Type": "Task"
+    },
+    "Score": {
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "NotifyFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "WriteOutput",
+      "Parameters": {
+        "ModelName": "credit-risk-pd",
+        "TransformInput": {
+          "DataSource": {
+            "S3DataSource": {
+              "S3DataType": "S3Prefix",
+              "S3Uri.$": "$.inputUri"
+            }
+          }
+        },
+        "TransformJobName.$": "States.Format('credit-risk-pd-1.0.0-{}', $$.Execution.Name)",
+        "TransformOutput": {
+          "S3OutputPath.$": "$.outputUri"
+        },
+        "TransformResources": {
+          "InstanceCount": 1,
+          "InstanceType": "ml.m5.xlarge"
+        }
+      },
+      "Resource": "arn:aws:states:::sagemaker:createTransformJob.sync",
+      "Type": "Task"
+    },
+    "ValidateInput": {
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "NotifyFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "DataQuality",
+      "Parameters": {
+        "inputSchemaRef": "s3://absa-exl/schemas/credit-risk-pd/1.0.0/input.json",
+        "modelName": "credit-risk-pd",
+        "modelVersion": "1.0.0"
+      },
+      "Resource": "${ValidateInputLambdaArn}",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 4,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "VarianceDecision": {
+      "Choices": [
+        {
+          "BooleanEquals": true,
+          "Next": "Notify",
+          "Variable": "$.varianceWithinThreshold"
+        }
+      ],
+      "Default": "BlockDelivery",
+      "Type": "Choice"
+    },
+    "WriteOutput": {
+      "Next": "PIRVariance",
+      "Parameters": {
+        "outputSchemaRef": "s3://absa-exl/schemas/credit-risk-pd/1.0.0/output.json",
+        "outputUri.$": "$.outputUri"
+      },
+      "Resource": "${WriteOutputLambdaArn}",
+      "Type": "Task"
+    }
+  }
+}

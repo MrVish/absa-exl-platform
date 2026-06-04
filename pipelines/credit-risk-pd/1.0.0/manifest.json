@@ -1,0 +1,25 @@
+{
+  "digest": "c3b28c5680d669008a3dcddc4905f875d43dadfc36958c2a97889cb8677226d0",
+  "digest_algorithm": "SHA-256",
+  "payload": {
+    "artifact_hashes": {
+      "model_config_sha256": "1661abf0df2649eecbf2cc5f411de85fad642ac469a5dcbd38796cfde0502418",
+      "registration_sha256": "8dd7c8d2f08135ba218dad64cbd39d07ce4974b01164755d027f345aab52b67a",
+      "statemachine_sha256": "3c9c911a53ca91a905fb338651d2955710d4201b165a7472ba0d62383af328d7",
+      "terraform_sha256": "a430ec00874eeb07972b034caaf3dc572ea406100e224f029c00061b17a22083"
+    },
+    "generated_at": "2026-06-04T09:14:39.415979+00:00",
+    "generator_version": "0.1.0",
+    "model_name": "credit-risk-pd",
+    "schema_version": 1,
+    "tier": "standard",
+    "version": "1.0.0"
+  },
+  "signature": "UNSIGNED",
+  "signed_at": "2026-06-04T09:14:39.415979+00:00",
+  "signer_principal": "unsigned",
+  "signing_algorithm": "RSASSA_PKCS1_V1_5_SHA_256",
+  "signing_key_arn": "arn:aws:kms:placeholder:000000000000:key/unsigned",
+  "subject_ref": "pipelines/credit-risk-pd/1.0.0/",
+  "subject_type": "pipeline"
+}
