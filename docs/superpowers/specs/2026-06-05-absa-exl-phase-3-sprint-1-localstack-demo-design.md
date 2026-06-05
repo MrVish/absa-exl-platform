@@ -257,17 +257,19 @@ Per-step timeouts: 60s health, 120s terraform apply, 10s output.
 
 **Critical assertion between 3.3 and 3.5:** the package manifest's `digest` field at S3 must equal the pipeline manifest's `payload.upstream_refs[0].digest` field. This is the cryptographic anchor Sprint 4 shipped; the demo proves it survives signing.
 
-### 6.4 Phase 4 — Verifier chain (5 sub-steps under absa-sim)
+### 6.4 Phase 4 — Verifier chain (7 sub-steps under absa-sim)
 
 All boto3 calls use `absa_session()`. Every request carries `x-localstack-account-id: 222222222222`, so LocalStack evaluates the request as if it came from the ABSA account.
 
 | # | What runs | What's asserted |
 |---|---|---|
-| 4.1 | Read pipeline manifest from manifest bucket via `s3.get_object` | cross-account `s3:GetObject` succeeds — Sprint 3's bucket policy actually grants ABSA read |
-| 4.2 | Read public key PEM from public-key bucket | cross-account `s3:GetObject` on public-key bucket succeeds |
-| 4.3 | `from manifest_signer.verifier import verify_offline; verify_offline(envelope, public_key_pem=pem)` | no exception — signature valid against published PEM |
-| 4.4 | Re-read package manifest; assert `pipeline.upstream_refs[0].digest == sha256(canonical_json(package.payload))` | chain digest holds end-to-end through signing |
-| 4.5 | `urllib.request` GET `{registry_url}/registry/credit-risk-pd/1.0.0` (registry API is exl-prod-sim-side, no cross-account here) | 200 OK; response `manifest_uri` == S3 URI from step 3.5 |
+| 4.1 | Read pipeline manifest from manifest bucket via `s3.get_object` (`pipelines/credit-risk-pd/1.0.0/manifest.json`) | cross-account `s3:GetObject` succeeds — Sprint 3's bucket policy actually grants ABSA read |
+| 4.2 | Read package manifest from manifest bucket (`packages/credit-risk-pd/1.0.0/manifest.json`) | cross-account `s3:GetObject` on the package prefix succeeds |
+| 4.3 | Read public key PEM from public-key bucket | cross-account `s3:GetObject` on public-key bucket succeeds |
+| 4.4 | `from manifest_signer.verifier import verify_offline; verify_offline(pipeline_envelope, public_key_pem=pem)` | no exception — pipeline signature valid against published PEM |
+| 4.5 | `verify_offline(package_envelope, public_key_pem=pem)` | no exception — package signature valid; both envelopes are independently sound |
+| 4.6 | Verifier **re-computes** `expected_digest = sha256(canonical_json(package_envelope["payload"])).hexdigest()` and asserts `expected_digest == pipeline_envelope["payload"]["upstream_refs"][0]["digest"]` | chain digest holds end-to-end. Importantly, we do not trust the package envelope's pre-existing `digest` field — we recompute from the payload to defend against an envelope whose `digest` was tampered post-signing (the signature covers the payload, not the envelope-level `digest` field). |
+| 4.7 | `urllib.request` GET `{registry_url}/registry/credit-risk-pd/1.0.0` (registry API is exl-prod-sim-side, no cross-account here) | 200 OK; response `manifest_uri` == S3 URI from step 3.5 |
 
 ### 6.5 Phase 5 — `down` (skipped if `--keep-state` or `--no-cleanup`)
 
@@ -325,10 +327,11 @@ The split matters because exit 1 should block merges, exit 2/3 should not — th
 | 2.2 | uvicorn `/healthz` 500 | upstream FastAPI raised on startup | 1 | platform bug |
 | 3.x | CLI exit ≠ 0 | `subprocess.run` returncode | 1 | platform bug |
 | 3.5 | `[skip-existing]` on a fresh run | parse stdout | 1 | T15 regression or LocalStack persistence leak |
-| 3.x or 4.4 | Chain digest mismatch | explicit assertion | 1 | upstream resolver regression or signing mutated payload |
-| 4.1 / 4.2 | Cross-account 403 | botocore `ClientError` code=AccessDenied | 1 | Sprint 3 IAM regression |
-| 4.3 | `VerificationError` from verify_offline | exception | 1 | signing/canonicalization regression |
-| 4.5 | Registry GET 404 | `urllib.error.HTTPError` | 1 | register step silently failed or DDB write didn't land |
+| Producer-side chain check (between 3.4 and 3.5) | `package_envelope["digest"] != pipeline_envelope["payload"]["upstream_refs"][0]["digest"]` | explicit assertion in chain.py before sign-all | 1 | `upstream_resolver` produced wrong digest, or `code-intake generate-manifest` regenerated with different payload than before sign |
+| 4.1 / 4.2 / 4.3 | Cross-account 403 | botocore `ClientError` code=AccessDenied | 1 | Sprint 3 IAM regression on manifest bucket or public-key bucket policy |
+| 4.4 / 4.5 | `VerificationError` from verify_offline | exception | 1 | signing/canonicalization regression — one envelope's signature does not validate against the published PEM |
+| 4.6 | Chain digest mismatch | explicit assertion | 1 | upstream resolver regression, signing mutated payload, or `code-intake generate-manifest` produced a payload whose canonical_json digest differs from what Sprint 4's chain expects |
+| 4.7 | Registry GET 404 | `urllib.error.HTTPError` | 1 | register step silently failed or DDB write didn't land |
 
 ### 7.4 Cleanup guarantee
 
