@@ -2084,11 +2084,11 @@ variable "env_name" {
 # cross-account - demo passes 222222222222.
 #
 # IMPORTANT: verify the module's actual variable names by reading
-# manifest-signer/terraform/signing-foundation/variables.tf before
+# terraform/modules/signing-foundation/variables.tf before
 # implementing. Adjust the inputs below to match.
 
 module "signing" {
-  source = "../../../manifest-signer/terraform/signing-foundation"
+  source = "../../../terraform/modules/signing-foundation"
 
   env_name               = var.env_name
   external_verifier_arns = var.external_verifier_arns
@@ -2156,10 +2156,10 @@ resource "aws_s3_bucket_policy" "public_keys_cross_account_read" {
 # Reuse the pipeline-registry Terraform module. Same DDB schema and GSIs
 # as production; encryption uses the LocalStack-side KMS CMK.
 #
-# Adjust module inputs to match pipeline-registry/terraform/variables.tf.
+# Adjust module inputs to match terraform/modules/pipeline-registry/variables.tf.
 
 module "registry" {
-  source = "../../../pipeline-registry/terraform"
+  source = "../../../terraform/modules/pipeline-registry"
 
   env_name    = var.env_name
   kms_key_arn = module.signing.kms_key_arn
@@ -2295,7 +2295,7 @@ def test_build_uvicorn_env_sets_localstack_endpoint() -> None:
     assert env["AWS_REGION"] == "eu-west-1"
     assert env["AWS_ACCESS_KEY_ID"] == "test"
     assert env["AWS_SECRET_ACCESS_KEY"] == "test"
-    assert env["PIPELINE_REGISTRY_TABLE_NAME"] == "pipeline-registry-dev"
+    assert env["TABLE_NAME"] == "pipeline-registry-dev"
     assert env["LOCALSTACK_ACCOUNT_ID"] == "111111111111"
 
 
@@ -2394,8 +2394,7 @@ def _build_uvicorn_env(endpoints: DemoEndpoints) -> dict[str, str]:
             "AWS_DEFAULT_REGION": "eu-west-1",
             "AWS_ACCESS_KEY_ID": "test",
             "AWS_SECRET_ACCESS_KEY": "test",
-            "PIPELINE_REGISTRY_TABLE_NAME": endpoints.registry_table,
-            "PIPELINE_REGISTRY_ENV": "dev",
+            "TABLE_NAME": endpoints.registry_table,
             "LOCALSTACK_ACCOUNT_ID": PRODUCER_ACCOUNT_ID,
         }
     )
@@ -2455,7 +2454,7 @@ def _kill_stale_uvicorn_if_any() -> None:
 def run_registry(
     *, endpoints: DemoEndpoints, port: int = 8080
 ) -> Iterator[str]:
-    """Spawn uvicorn pipeline_registry.app as a background subprocess.
+    """Spawn uvicorn registry_api.app as a background subprocess.
 
     Yields http://localhost:<port> once /readyz returns 200. Tears down
     via SIGTERM on context exit, even on exception.
@@ -2466,7 +2465,7 @@ def run_registry(
     proc = subprocess.Popen(
         [
             "uv", "run", "uvicorn",
-            "pipeline_registry.app:create_app",
+            "registry_api.app:create_app",
             "--factory",
             "--port", str(port),
             "--host", "127.0.0.1",
@@ -4329,7 +4328,9 @@ on:
       - "code-intake/**"
       - "pipeline-factory/**"
       - "manifest-signer/**"
-      - "pipeline-registry/**"
+      - "registry/api/**"
+      - "terraform/modules/pipeline-registry/**"
+      - "terraform/modules/signing-foundation/**"
       - "platform-contracts/**"
       - "packages/credit-risk-pd/**"
       - "pipelines/credit-risk-pd/**"
@@ -4345,7 +4346,9 @@ on:
       - "code-intake/**"
       - "pipeline-factory/**"
       - "manifest-signer/**"
-      - "pipeline-registry/**"
+      - "registry/api/**"
+      - "terraform/modules/pipeline-registry/**"
+      - "terraform/modules/signing-foundation/**"
       - "platform-contracts/**"
       - "packages/credit-risk-pd/**"
       - "pipelines/credit-risk-pd/**"
@@ -4688,8 +4691,8 @@ Expected: all clean.
 
 ```bash
 terraform -chdir=infra/localstack/terraform validate
-terraform -chdir=manifest-signer/terraform/signing-foundation validate
-terraform -chdir=pipeline-registry/terraform validate
+terraform -chdir=terraform/modules/signing-foundation validate
+terraform -chdir=terraform/modules/pipeline-registry validate
 ```
 
 Expected: all "Success!"
