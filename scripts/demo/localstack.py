@@ -89,13 +89,17 @@ class LocalStackHealthClient:
                 urllib.error.URLError,
                 json.JSONDecodeError,
                 http.client.HTTPException,
-                # LocalStack's gateway accepts TCP connections during early
-                # init but immediately closes them before sending an HTTP
-                # response, producing http.client.RemoteDisconnected (a
-                # HTTPException subclass). Catching HTTPException broadly
-                # covers both that race and any other half-baked-response
-                # variants during startup.
-                ConnectionResetError,
+                # LocalStack's gateway is racy during startup: TCP accepts
+                # arrive before HTTP service is ready, producing varied
+                # errors depending on OS and gateway state:
+                #   - http.client.RemoteDisconnected (Linux/macOS)
+                #   - ConnectionResetError (Linux raw socket)
+                #   - ConnectionAbortedError - WinError 10053 (Windows)
+                #   - socket.timeout / TimeoutError
+                # OSError is the common ancestor of every connection-tier
+                # error we want to retry on. Catching it here is broad but
+                # the loop has a deadline, so we won't retry forever.
+                OSError,
             ):
                 time.sleep(poll_interval_s)
                 continue
