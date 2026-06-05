@@ -6,6 +6,7 @@ surface and the /_localstack/health poll. No boto3 here.
 
 from __future__ import annotations
 
+import http.client
 import json
 import subprocess
 import time
@@ -84,7 +85,18 @@ class LocalStackHealthClient:
                     f"{self.endpoint}/_localstack/health", timeout=2.0
                 ) as response:
                     payload = json.loads(response.read())
-            except (urllib.error.URLError, json.JSONDecodeError):
+            except (
+                urllib.error.URLError,
+                json.JSONDecodeError,
+                http.client.HTTPException,
+                # LocalStack's gateway accepts TCP connections during early
+                # init but immediately closes them before sending an HTTP
+                # response, producing http.client.RemoteDisconnected (a
+                # HTTPException subclass). Catching HTTPException broadly
+                # covers both that race and any other half-baked-response
+                # variants during startup.
+                ConnectionResetError,
+            ):
                 time.sleep(poll_interval_s)
                 continue
             services = payload.get("services", {})
