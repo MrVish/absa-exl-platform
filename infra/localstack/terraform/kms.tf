@@ -13,13 +13,15 @@
 #     by the demo (the demo signs via static creds against LocalStack).
 #   - key_admin_principals: account root, so any LocalStack caller in the
 #     EXL account can administer the key.
-#   - writer_policy_arn: wired from module.registry.writer_policy_arn,
-#     so the registrar role can POST/PATCH the registry API.
+#   - writer_policy_arn: aws_iam_policy.registrar_stub.arn (see iam.tf).
+#     The demo's registrar runs as uvicorn (T9), not behind API Gateway,
+#     so we satisfy the module's required input with a stub IAM policy
+#     and never actually assume the module's registrar role.
 #
 # The signing-foundation module already creates the two S3 buckets with
 # safe defaults (versioning, SSE, public-access-block). We don't redefine
-# them in s3.tf -- s3.tf only adds the cross-account read policy for the
-# signed-manifests bucket.
+# them in s3.tf -- s3.tf only adds the cross-account read policies for
+# the signed-manifests + public-keys buckets.
 
 module "signing" {
   source = "../../../terraform/modules/signing-foundation"
@@ -30,7 +32,7 @@ module "signing" {
   github_oidc_provider_arn = "arn:aws:iam::${var.exl_account_id}:oidc-provider/token.actions.githubusercontent.com"
   key_admin_principals     = ["arn:aws:iam::${var.exl_account_id}:root"]
   absa_verifier_principals = var.external_verifier_arns
-  writer_policy_arn        = module.registry.writer_policy_arn
+  writer_policy_arn        = aws_iam_policy.registrar_stub.arn
 
   signed_manifests_bucket_name = "exl-signed-manifests-${var.env_name}"
   public_keys_bucket_name      = "exl-public-keys-${var.env_name}"

@@ -1,33 +1,72 @@
-# Reuse the pipeline-registry module for the registry DDB table.
+# The demo runs the registry as a local uvicorn process (T9) against
+# this DDB table. We do NOT reuse the production pipeline-registry
+# module because that module also creates Lambda + APIGW + CloudWatch
+# Logs resources that LocalStack CE doesn't have enabled in our
+# docker-compose.yml SERVICES list (only kms,s3,dynamodb,sts,iam).
+# Reusing the module would cause terraform apply to hit real AWS
+# Lambda/APIGW/Logs endpoints and fail.
 #
-# Module path: terraform/modules/pipeline-registry
-#   - creates the model_pipeline_registry DDB table + by_status GSI
-#   - creates a module-owned KMS CMK for DDB SSE + CloudWatch log encryption
-#   - creates the registry Lambda + API Gateway v2 (HTTP API) + IAM policies
+# This thin local resource mirrors the table schema the production
+# module creates (see terraform/modules/pipeline-registry/main.tf
+# aws_dynamodb_table.this for the canonical schema). Keep this in
+# sync if the production module's schema evolves -- the FastAPI
+# registry app (T9) queries this table directly and depends on the
+# hash/range keys + the by_status GSI.
 #
-# Inputs mapped for LocalStack:
-#   - env: "dev" (must be one of dev/stg/prod per the module's validator)
-#   - lambda_source_dir: registry/api/src, relative to this stack
-#     (path.module = infra/localstack/terraform; needs 3x ../ to reach repo root)
-#   - enable_deletion_protection: false -- the demo tears down + redeploys
-#     every run, so deletion protection would block destroy
-#   - log_retention_days: 1 -- minimum retention saves LocalStack a touch
-#     of bookkeeping; the demo logs are ephemeral
-#   - tags: cost_center is required by the module validator
-#
-# Output: module.registry.table_name (consumed by outputs.tf as registry_table),
-# module.registry.writer_policy_arn (consumed by signing-foundation in kms.tf
-# to wire the registrar role to POST/PATCH the registry API).
+# Differences from production:
+#   - billing_mode/PAY_PER_REQUEST: same
+#   - hash_key=model_name, range_key=version: same
+#   - by_status GSI: same
+#   - point_in_time_recovery: false here (LocalStack CE doesn't
+#     actually support PITR; production uses true)
+#   - deletion_protection: false here (demo tears down + redeploys)
+#   - server_side_encryption: wired to the signing module's KMS key
+#     since this stack doesn't create a dedicated registry CMK
 
-module "registry" {
-  source = "../../../terraform/modules/pipeline-registry"
+resource "aws_dynamodb_table" "registry" {
+  name         = "model_pipeline_registry-${var.env_name}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "model_name"
+  range_key    = "version"
 
-  env                        = var.env_name
-  lambda_source_dir          = "${path.module}/../../../registry/api/src"
-  log_retention_days         = 1
-  enable_deletion_protection = false
+  attribute {
+    name = "model_name"
+    type = "S"
+  }
+
+  attribute {
+    name = "version"
+    type = "S"
+  }
+
+  attribute {
+    name = "approval_status"
+    type = "S"
+  }
+
+  attribute {
+    name = "updated_at"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "by_status"
+    hash_key        = "approval_status"
+    range_key       = "updated_at"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = false # LocalStack CE doesn't support PITR; production uses true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = module.signing.kms_key_arn
+  }
+
   tags = {
-    cost_center = "model-hosting"
-    env         = var.env_name
+    Environment = "demo"
+    Purpose     = "pipeline-registry-table"
   }
 }

@@ -31,3 +31,33 @@ resource "aws_iam_role_policy_attachment" "demo_signer_admin" {
   # NEVER attach AdministratorAccess to a producer role in production.
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
+
+# Placeholder writer policy for the signing-foundation module.
+#
+# The signing-foundation module requires a writer_policy_arn input that
+# it attaches to its registrar role (so the registrar can POST/PATCH the
+# registry API). In production this comes from the pipeline-registry
+# module's writer_policy_arn output (execute-api:Invoke on POST/PATCH
+# routes against the registry's API Gateway).
+#
+# Here the demo's registrar runs as a local uvicorn process (T9), not
+# behind API Gateway, so there is no execute-api policy to attach.
+# The demo's producer chain uses AdministratorAccess via the demo_signer
+# role above to call the uvicorn endpoint directly. This stub policy
+# just satisfies the module's required input with a syntactically valid
+# ARN; the registrar role itself is never assumed by the demo.
+
+resource "aws_iam_policy" "registrar_stub" {
+  name        = "exl-demo-registrar-stub-${var.env_name}"
+  description = "Placeholder writer policy for the signing-foundation module. The demo's registrar runs as uvicorn and uses AdministratorAccess via the demo_signer role instead."
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "dynamodb:PutItem"
+        Resource = aws_dynamodb_table.registry.arn
+      },
+    ]
+  })
+}

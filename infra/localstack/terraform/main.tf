@@ -4,6 +4,20 @@
 # 111111111111 "exl-prod" sim account here. ABSA's 222222222222 sim
 # account is referenced via var.external_verifier_arns and is
 # materialised at runtime via the x-localstack-account-id header.
+#
+# NOTE on cleanup order: the reused signing-foundation module declares
+# lifecycle { prevent_destroy = true } on both the signed-manifests
+# and public-keys S3 buckets. As a result, `terraform destroy` against
+# this stack will FAIL with "Resource cannot be destroyed". The demo
+# orchestrator handles this in scripts/demo/__main__.py (T12) by
+# registering cleanups in this order (LIFO unwind in reverse):
+#   1. uvicorn kill        (innermost, registered last, fires first)
+#   2. docker compose down -v   (discards LocalStack container + volumes)
+#   3. terraform destroy   (best-effort; once docker-down has fired,
+#                           the bucket resources are gone and destroy
+#                           is a no-op against an empty state)
+# If T12 ever reorders these, terraform destroy will start failing
+# again and the demo will exit code 3 (DemoCleanupFailed) at teardown.
 
 provider "aws" {
   region                      = "eu-west-1"

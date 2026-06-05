@@ -2,8 +2,13 @@
 # Keep names in sync with scripts/demo/endpoints.py:_REQUIRED_KEYS:
 #   kms_key_arn, kms_key_alias, manifest_bucket, public_key_bucket, registry_table
 #
-# Values come from the production modules' real output names (verified
-# against terraform/modules/{signing-foundation,pipeline-registry}/outputs.tf).
+# Values come from:
+#   - module.signing.* for KMS + S3 buckets (signing-foundation module
+#     output names verified against
+#     terraform/modules/signing-foundation/outputs.tf)
+#   - aws_dynamodb_table.registry for the registry table (created
+#     locally in dynamodb.tf; the production pipeline-registry module
+#     is not reused -- see dynamodb.tf header for why)
 
 output "kms_key_arn" {
   description = "ARN of the manifest-signing KMS asymmetric CMK."
@@ -27,5 +32,5 @@ output "public_key_bucket" {
 
 output "registry_table" {
   description = "DynamoDB table name for the model pipeline registry."
-  value       = module.registry.table_name
+  value       = aws_dynamodb_table.registry.name
 }
