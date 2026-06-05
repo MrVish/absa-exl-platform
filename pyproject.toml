@@ -25,6 +25,9 @@ extend-exclude = [
     "platform-contracts/src/platform_contracts/models.py",
     "code-intake/tests/fixtures/broken_python",
 ]
+# scripts/demo/ is not a uv workspace member (spec §10.4) so include it
+# explicitly so `ruff check <subdir>` and editor integrations cover it.
+extend-include = ["scripts/demo/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
@@ -32,6 +35,17 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+# Default scope when mypy is invoked without arguments. CI still passes
+# explicit paths (.github/workflows/python-validate.yml); this list mainly
+# serves local invocations and editor integrations.
+files = [
+    "platform-contracts/src",
+    "registry/api/src",
+    "pipeline-factory/src",
+    "manifest-signer/src",
+    "code-intake/src",
+    "scripts/demo",
+]
 
 [[tool.mypy.overrides]]
 module = ["moto.*", "mangum.*", "boto3.*", "botocore.*", "mypy_boto3_kms.*", "mypy_boto3_s3.*"]
@@ -39,4 +53,11 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q --import-mode=importlib"
-testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests", "manifest-signer/tests", "code-intake/tests"]
+testpaths = [
+    "platform-contracts/tests",
+    "registry/api/tests",
+    "pipeline-factory/tests",
+    "manifest-signer/tests",
+    "code-intake/tests",
+    "scripts/demo/tests",
+]
