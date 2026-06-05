@@ -14,6 +14,10 @@ override.tf.json
 terraform.rc
 **/.build/
 
+# Demo orchestrator runtime artifacts (T9 uvicorn_runner)
+infra/localstack/.uvicorn.pid
+infra/localstack/.uvicorn.log
+
 # Editors
 .vscode/
 .idea/

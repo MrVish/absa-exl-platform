@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from demo.endpoints import DemoEndpoints
 from demo.errors import DemoError
 from demo.uvicorn_runner import _build_uvicorn_env, run_registry
+
+
+@pytest.fixture(autouse=True)
+def _isolate_runtime_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Redirect _PID_FILE and _LOG_FILE into tmp_path for test isolation."""
+    monkeypatch.setattr("demo.uvicorn_runner._PID_FILE", tmp_path / ".uvicorn.pid")
+    monkeypatch.setattr("demo.uvicorn_runner._LOG_FILE", tmp_path / ".uvicorn.log")
 
 
 def _make_endpoints() -> DemoEndpoints:
@@ -30,9 +39,11 @@ def test_build_uvicorn_env_sets_localstack_endpoint() -> None:
 
 def test_run_registry_starts_uvicorn_and_polls_readyz() -> None:
     endpoints = _make_endpoints()
-    with patch("demo.uvicorn_runner.subprocess.Popen") as mock_popen, \
-         patch("demo.uvicorn_runner._wait_for_readyz") as mock_wait, \
-         patch("demo.uvicorn_runner._write_pid_file"):
+    with (
+        patch("demo.uvicorn_runner.subprocess.Popen") as mock_popen,
+        patch("demo.uvicorn_runner._wait_for_readyz") as mock_wait,
+        patch("demo.uvicorn_runner._write_pid_file"),
+    ):
         fake_proc = MagicMock()
         fake_proc.pid = 12345
         fake_proc.poll.return_value = None
@@ -45,30 +56,35 @@ def test_run_registry_starts_uvicorn_and_polls_readyz() -> None:
 
 def test_run_registry_kills_process_on_exception() -> None:
     endpoints = _make_endpoints()
-    with patch("demo.uvicorn_runner.subprocess.Popen") as mock_popen, \
-         patch("demo.uvicorn_runner._wait_for_readyz"), \
-         patch("demo.uvicorn_runner._write_pid_file"):
+    with (
+        patch("demo.uvicorn_runner.subprocess.Popen") as mock_popen,
+        patch("demo.uvicorn_runner._wait_for_readyz"),
+        patch("demo.uvicorn_runner._write_pid_file"),
+    ):
         fake_proc = MagicMock()
         fake_proc.pid = 12345
         fake_proc.poll.return_value = None
         mock_popen.return_value = fake_proc
-        with pytest.raises(RuntimeError, match="body raised"):
-            with run_registry(endpoints=endpoints, port=8080):
-                raise RuntimeError("body raised")
+        with (
+            pytest.raises(RuntimeError, match="body raised"),
+            run_registry(endpoints=endpoints, port=8080),
+        ):
+            raise RuntimeError("body raised")
         fake_proc.terminate.assert_called_once()
 
 
 def test_run_registry_raises_demoerror_if_readyz_never_ready() -> None:
     endpoints = _make_endpoints()
-    with patch("demo.uvicorn_runner.subprocess.Popen") as mock_popen, \
-         patch("demo.uvicorn_runner._wait_for_readyz") as mock_wait, \
-         patch("demo.uvicorn_runner._write_pid_file"):
+    with (
+        patch("demo.uvicorn_runner.subprocess.Popen") as mock_popen,
+        patch("demo.uvicorn_runner._wait_for_readyz") as mock_wait,
+        patch("demo.uvicorn_runner._write_pid_file"),
+    ):
         fake_proc = MagicMock()
         fake_proc.pid = 12345
         fake_proc.poll.return_value = None
         mock_popen.return_value = fake_proc
         mock_wait.side_effect = DemoError("readyz did not respond in 30s")
-        with pytest.raises(DemoError):
-            with run_registry(endpoints=endpoints, port=8080):
-                pass
+        with pytest.raises(DemoError), run_registry(endpoints=endpoints, port=8080):
+            pass
         fake_proc.terminate.assert_called_once()

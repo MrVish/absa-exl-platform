@@ -15,6 +15,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import signal
 import subprocess
 import time
 import urllib.error
@@ -61,7 +62,9 @@ def _wait_for_readyz(url: str, *, timeout_s: float = 30.0, poll_interval_s: floa
                 last_status = response.status
         except urllib.error.HTTPError as e:
             last_status = e.code  # 503 from /readyz when DDB table missing
-        except urllib.error.URLError:
+        except (urllib.error.URLError, OSError):
+            # OSError covers socket.timeout, ConnectionResetError, etc. on
+            # edge cases where the socket layer raises before urllib wraps it.
             pass  # uvicorn not yet listening
         time.sleep(poll_interval_s)
     raise DemoError(
@@ -86,7 +89,10 @@ def _kill_stale_uvicorn_if_any() -> None:
     except (OSError, ValueError):
         return
     try:
-        os.kill(pid, 15)  # SIGTERM
+        os.kill(pid, signal.SIGTERM)
+        # On POSIX: SIGTERM, graceful shutdown signal.
+        # On Windows: CPython maps os.kill(*, SIGTERM) to TerminateProcess
+        # (immediate hard kill). Fine for cleaning up a stale orphan.
         time.sleep(0.5)
     except (ProcessLookupError, PermissionError):
         pass
@@ -101,39 +107,44 @@ def run_registry(*, endpoints: DemoEndpoints, port: int = 8080) -> Iterator[str]
 
     Yields http://localhost:<port> once /readyz returns 200. Tears down
     via SIGTERM on context exit, even on exception.
+
+    Caller must invoke from the repo root; pid and log files are written
+    under infra/localstack/ relative to cwd.
     """
     _kill_stale_uvicorn_if_any()
 
     log_handle = _LOG_FILE.open("wb")
-    proc = subprocess.Popen(
-        [
-            "uv",
-            "run",
-            "uvicorn",
-            "registry_api.app:create_app",
-            "--factory",
-            "--port",
-            str(port),
-            "--host",
-            "127.0.0.1",
-            "--log-level",
-            "info",
-        ],
-        env=_build_uvicorn_env(endpoints),
-        stdout=log_handle,
-        stderr=subprocess.STDOUT,
-    )
-    _write_pid_file(proc.pid)
-    url = f"http://localhost:{port}"
     try:
-        _wait_for_readyz(url)
-        yield url
-    finally:
-        proc.terminate()
+        proc = subprocess.Popen(
+            [
+                "uv",
+                "run",
+                "uvicorn",
+                "registry_api.app:create_app",
+                "--factory",
+                "--port",
+                str(port),
+                "--host",
+                "127.0.0.1",
+                "--log-level",
+                "info",
+            ],
+            env=_build_uvicorn_env(endpoints),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+        )
+        _write_pid_file(proc.pid)
+        url = f"http://localhost:{port}"
         try:
-            proc.wait(timeout=5.0)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+            _wait_for_readyz(url)
+            yield url
+        finally:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+            with contextlib.suppress(OSError):
+                _PID_FILE.unlink()
+    finally:
         log_handle.close()
-        with contextlib.suppress(OSError):
-            _PID_FILE.unlink()
