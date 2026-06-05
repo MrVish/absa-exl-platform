@@ -86,7 +86,28 @@ def build_package_payload(
     results: list[CheckResult],
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    """Construct the payload object that goes inside the package envelope."""
+    """Construct the payload object that goes inside the package envelope.
+
+    Deferred validation rules (see ADR-0010 "Deferred checks"):
+
+    * DEFERRED-CHECK: SCH002 — schema-version drift detection. The schema
+      checker (``code_intake.checkers.schema``) only validates SCH001
+      (model_config.yaml shape). SCH002 — drift between the code's declared
+      schema_version and the contracted schema version — runs here at
+      manifest-build time, because at that point we have access to the full
+      payload AND the contracted schema version. A future ``_validate_schema_version``
+      hook on the returned payload is the intended landing point.
+    * DEFERRED-CHECK: SCH003 — PIR mapping referential integrity. The PIR
+      checker (``code_intake.checkers.pir``) verifies PIR001 (pir.yaml shape)
+      + PIR002 (every column the Python references appears in
+      ``pir.inputs[]``). SCH003 — "the PIR mapping does not reference columns
+      missing from the extracted column set" — also runs at manifest-build
+      time because it needs the union of all columns referenced across
+      ``python/``, which is computed during payload assembly.
+
+    Both deferrals are deliberate: per-checker execution does not yet have
+    the cross-cutting context these rules need.
+    """
     config_path = package_path / "model_config.yaml"
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     now = generated_at or datetime.now(UTC).isoformat(timespec="seconds")

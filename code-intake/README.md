@@ -41,6 +41,23 @@ the exception. A checker whose subprocess exceeds its `timeout_seconds`
 emits a `<CHECKER>998` finding, distinct from `999` so operators can tell
 "checker timed out" apart from "checker threw an exception".
 
+### Deferred checks
+
+Some validation rules in ADR-0010 are intentionally deferred to manifest-
+build time rather than the checker stage. They need cross-cutting context
+(the full payload + the extracted column set) that no single checker has.
+
+| Code | Check | Where it runs |
+|------|-------|---------------|
+| SCH002 | Schema-version drift between code and contracted schema | `code_intake.manifest.build_package_payload` (deferred from `schema.py`) |
+| SCH003 | PIR mapping references columns not present in extracted set | `code_intake.manifest.build_package_payload` (deferred from `pir.py`) |
+
+Both deferrals are intentional: they run at manifest-build time because
+they need data not available during per-checker execution. See ADR-0010
+"Deferred checks".
+
+Grep for `DEFERRED-CHECK:` in the code to find the anchor sites.
+
 ## Don't hand-edit `manifest.json`
 
 The `manifest.json` in each `packages/<name>/<version>/` directory is
