@@ -69,10 +69,10 @@ class TestsChecker:
                         f"on {python_dir}"
                     ),
                     hint=(
-                        "Increase --timeout-seconds on TestsChecker, or "
-                        "investigate why pytest is hanging (a hung fixture, "
-                        "an infinite import side-effect, or a real test/tool "
-                        "bug)."
+                        "Increase the timeout_seconds constructor kwarg on "
+                        "TestsChecker, or investigate why pytest is hanging "
+                        "(a hung fixture, an infinite import side-effect, or "
+                        "a real test/tool bug)."
                     ),
                     location=str(python_dir),
                 )

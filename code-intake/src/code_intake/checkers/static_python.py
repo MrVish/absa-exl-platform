@@ -49,9 +49,10 @@ class StaticPythonChecker:
                 f"on {python_dir}"
             ),
             hint=(
-                "Increase --timeout-seconds on StaticPythonChecker, or "
-                "investigate why the tool is hanging (a hung fixture, an "
-                "infinite import side-effect, or a real tool bug)."
+                "Increase the timeout_seconds constructor kwarg on "
+                "StaticPythonChecker, or investigate why the tool is hanging "
+                "(a hung fixture, an infinite import side-effect, or a real "
+                "tool bug)."
             ),
             location=str(python_dir),
         )
