@@ -1,7 +1,11 @@
 """subprocess wrapper around the terraform CLI.
 
 Per spec section 6.2 phase 1 steps 1.3-1.5. Captures all output for
-transcript/failure diagnosis. Raises DemoStepFailed on non-zero exit.
+transcript/failure diagnosis. Raises bare DemoError on non-zero exit so
+__main__.py classifies terraform failures as infra (exit 2), matching
+the localstack.up()/down() pattern. Real .tf module errors get the same
+treatment; CI's `terraform validate` catches those before they reach
+the demo.
 """
 
 from __future__ import annotations
@@ -10,7 +14,23 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from demo.errors import DemoStepFailed
+from demo.errors import DemoError
+
+
+def _hint_for_step(step: str) -> str:
+    """Per-subcommand hint for terraform failures."""
+    if step == "init":
+        return "check provider/module source paths are resolvable."
+    if step == "apply":
+        return (
+            "if you see endpoint/connection errors, verify LocalStack is "
+            "running (`docker compose -f infra/localstack/docker-compose.yml ps`)."
+        )
+    if step == "output":
+        return "ensure `terraform apply` succeeded first; output reads from .tfstate."
+    if step == "destroy":
+        return "containers may be wedged; `docker ps` + `docker kill` if needed."
+    return "check the terraform CLI output above."
 
 
 @dataclass(frozen=True)
@@ -61,24 +81,20 @@ class TerraformRunner:
         try:
             proc = subprocess.run(args, capture_output=True, timeout=self.timeout_s)
         except subprocess.TimeoutExpired as e:
-            raise DemoStepFailed(
-                step=f"terraform-{step}",
-                account="exl-prod-sim",
-                exit_code=-1,
-                stdout=e.stdout or b"",
-                stderr=e.stderr or b"",
-                hint=f"terraform {step} timed out after {self.timeout_s}s",
+            stdout = (e.stdout or b"").decode("utf-8", errors="replace")
+            stderr = (e.stderr or b"").decode("utf-8", errors="replace")
+            raise DemoError(
+                f"terraform {step} timed out after {self.timeout_s}s.\n"
+                f"stdout:\n{stdout}\n"
+                f"stderr:\n{stderr}"
             ) from e
         if proc.returncode != 0:
-            raise DemoStepFailed(
-                step=f"terraform-{step}",
-                account="exl-prod-sim",
-                exit_code=proc.returncode,
-                stdout=proc.stdout,
-                stderr=proc.stderr,
-                hint=(
-                    f"Check `terraform {step}` output. If you see endpoint "
-                    f"errors, verify LocalStack is running."
-                ),
+            stdout = proc.stdout.decode("utf-8", errors="replace")
+            stderr = proc.stderr.decode("utf-8", errors="replace")
+            raise DemoError(
+                f"terraform {step} failed with exit code {proc.returncode}.\n"
+                f"stdout:\n{stdout}\n"
+                f"stderr:\n{stderr}\n"
+                f"Hint: {_hint_for_step(step)}"
             )
         return proc.stdout if return_stdout else b""
