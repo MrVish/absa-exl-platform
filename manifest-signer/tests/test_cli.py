@@ -230,6 +230,66 @@ def test_sign_all_packages_and_pipelines_dont_collide_on_s3_key(
     assert json.loads(pipe_body)["subject_type"] == "pipeline"
 
 
+def test_sign_all_continue_on_error_reports_failed_count(
+    runner,
+    unsigned_envelope,
+    signing_key,
+    kms_client,
+    s3_client,
+    tmp_path,
+):
+    """sign-all --continue-on-error: bad manifest doesn't abort the loop;
+    process exits 1 at the end but logs each good and each bad result.
+
+    Builds a fixture with 3 manifests (2 valid pipeline, 1 malformed JSON).
+    Asserts exit code is non-zero, errors=1 in output, and both good
+    manifests land in S3 at their namespaced keys.
+    """
+    root = tmp_path / "manifests"
+    for name in ("good-1", "bad-malformed", "good-2"):
+        pkg_dir = root / name / "1.0.0"
+        pkg_dir.mkdir(parents=True)
+        if name == "bad-malformed":
+            (pkg_dir / "manifest.json").write_text("{not valid json")
+        else:
+            envelope = {
+                **unsigned_envelope,
+                "payload": {**unsigned_envelope["payload"], "model_name": name},
+                "subject_ref": f"pipeline:{name}:1.0.0",
+            }
+            (pkg_dir / "manifest.json").write_text(
+                json.dumps(envelope, sort_keys=True, indent=2) + "\n"
+            )
+
+    bucket = "test-coe-bucket"
+    s3_client.create_bucket(
+        Bucket=bucket,
+        CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "sign-all",
+            "--root",
+            str(root),
+            "--key-arn",
+            signing_key["Arn"],
+            "--upload-to-bucket",
+            bucket,
+            "--signer-principal",
+            "test-principal",
+            "--continue-on-error",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "errors=1" in result.output
+    # Both good manifests landed in S3 under the pipelines/ prefix.
+    keys = {o["Key"] for o in s3_client.list_objects_v2(Bucket=bucket).get("Contents", [])}
+    assert any("good-1" in k for k in keys), f"good-1 missing; keys={keys}"
+    assert any("good-2" in k for k in keys), f"good-2 missing; keys={keys}"
+
+
 def test_verify_online_exits_zero_on_valid(
     runner,
     unsigned_envelope,
