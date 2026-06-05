@@ -26,6 +26,7 @@ def build_payload(
     tier: str,
     artifact_hashes: dict[str, str],
     generated_at: str | None = None,
+    upstream_refs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Construct the payload object that goes inside the manifest envelope."""
     return {
@@ -36,6 +37,7 @@ def build_payload(
         "tier": tier,
         "generated_at": generated_at or datetime.now(UTC).isoformat(),
         "artifact_hashes": artifact_hashes,
+        "upstream_refs": upstream_refs or [],
     }
 
 

@@ -81,3 +81,40 @@ def test_build_envelope_uses_provided_signed_at() -> None:
         signed_at="2026-05-26T06:00:00+00:00",
     )
     assert envelope["signed_at"] == "2026-05-26T06:00:00+00:00"
+
+
+def test_build_payload_embeds_upstream_refs() -> None:
+    from pipeline_factory.manifest import build_payload
+
+    payload = build_payload(
+        model_name="credit-risk-pd",
+        version="1.0.0",
+        tier="standard",
+        artifact_hashes={
+            "statemachine_sha256": "a" * 64,
+            "terraform_sha256": "b" * 64,
+            "model_config_sha256": "c" * 64,
+            "registration_sha256": "d" * 64,
+        },
+        upstream_refs=[{"type": "package", "ref": "credit-risk-pd@1.0.0", "digest": "f" * 64}],
+    )
+    assert payload["upstream_refs"] == [
+        {"type": "package", "ref": "credit-risk-pd@1.0.0", "digest": "f" * 64},
+    ]
+
+
+def test_build_payload_defaults_upstream_refs_to_empty_list() -> None:
+    from pipeline_factory.manifest import build_payload
+
+    payload = build_payload(
+        model_name="credit-risk-pd",
+        version="1.0.0",
+        tier="standard",
+        artifact_hashes={
+            "statemachine_sha256": "a" * 64,
+            "terraform_sha256": "b" * 64,
+            "model_config_sha256": "c" * 64,
+            "registration_sha256": "d" * 64,
+        },
+    )
+    assert payload["upstream_refs"] == []

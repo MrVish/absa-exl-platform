@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["platform-contracts", "registry/api", "pipeline-factory", "manifest-signer"]
+members = ["platform-contracts", "registry/api", "pipeline-factory", "manifest-signer", "code-intake"]
 
 [dependency-groups]
 dev = [
@@ -20,7 +20,11 @@ line-length = 100
 target-version = "py312"
 # Generated from JSON Schema; excluded so the CI drift check (raw codegen output)
 # stays byte-stable and ruff never reformats it.
-extend-exclude = ["platform-contracts/src/platform_contracts/models.py"]
+# Broken-* fixtures intentionally contain lint violations for negative-test cases.
+extend-exclude = [
+    "platform-contracts/src/platform_contracts/models.py",
+    "code-intake/tests/fixtures/broken_python",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
@@ -35,4 +39,4 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q --import-mode=importlib"
-testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests", "manifest-signer/tests"]
+testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests", "manifest-signer/tests", "code-intake/tests"]

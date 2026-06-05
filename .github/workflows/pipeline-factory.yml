@@ -8,6 +8,7 @@ on:
       - "phase-2/**"
     paths:
       - "pipeline-factory/**"
+      - "packages/**"
       - "pipelines/**"
       - "platform-contracts/**"
       - "manifest-signer/**"
@@ -21,6 +22,7 @@ on:
       - "phase-2/**"
     paths:
       - "pipeline-factory/**"
+      - "packages/**"
       - "pipelines/**"
       - "platform-contracts/**"
       - "manifest-signer/**"
@@ -93,11 +95,13 @@ jobs:
           set -euo pipefail
           # Build the assumed-role STS session ARN to record as signer_principal
           CALLER=$(aws sts get-caller-identity --query Arn --output text)
-          uv run manifest-signer sign-all \
-            --root pipelines \
-            --key-arn "$KMS_KEY_ARN" \
-            --upload-to-bucket "$SIGNED_MANIFESTS_BUCKET" \
-            --signer-principal "$CALLER"
+          for root in packages pipelines; do
+            uv run manifest-signer sign-all \
+              --root "$root" \
+              --key-arn "$KMS_KEY_ARN" \
+              --upload-to-bucket "$SIGNED_MANIFESTS_BUCKET" \
+              --signer-principal "$CALLER"
+          done
 
   register:
     name: register (POST to Registry API)

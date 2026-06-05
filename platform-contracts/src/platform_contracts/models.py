@@ -42,6 +42,13 @@ class ModelClass(StrEnum):
     propensity = 'propensity'
     other = 'other'
 
+class UpstreamPackage(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    name: Annotated[str, Field(pattern='^[a-z][a-z0-9-]{2,63}$')]
+    version: Annotated[str, Field(pattern='^\\d+\\.\\d+\\.\\d+$')]
+
 class ModelConfig(ContractBase):
     model_config = ConfigDict(
         extra='forbid',
@@ -60,6 +67,57 @@ class ModelConfig(ContractBase):
     registry_lookup_key: str | None = None
     sas_code_version: Annotated[str | None, Field(min_length=1)] = None
     inference_code_version: Annotated[str | None, Field(min_length=1)] = None
+    upstream_package: Annotated[
+        UpstreamPackage | None,
+        Field(
+            description='Code Intake package this pipeline scores from. When set, the generator embeds an upstream_refs entry in the pipeline manifest.'
+        ),
+    ] = None
+
+class Check(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    name: str
+    passed: bool
+    finding_count: Annotated[int, Field(ge=0)]
+    codes: list[str] | None = None
+
+class ValidationSummary(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    ran_at: AwareDatetime
+    checks: list[Check]
+
+class FileRef(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    path: Annotated[str, Field(min_length=1)]
+    sha256: Annotated[str, Field(pattern='^[a-f0-9]{64}$')]
+
+class PackageLayout(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    sas_files: list[FileRef]
+    python_files: list[FileRef]
+    test_files: list[FileRef]
+    pir_ref: FileRef
+    model_config_ref: FileRef
+
+class PackageManifestPayload(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    schema_version: Literal[1]
+    code_intake_version: Annotated[str, Field(pattern='^\\d+\\.\\d+\\.\\d+$')]
+    model_name: Annotated[str, Field(pattern='^[a-z][a-z0-9-]{2,63}$')]
+    version: Annotated[str, Field(pattern='^\\d+\\.\\d+\\.\\d+$')]
+    generated_at: AwareDatetime
+    package_layout: PackageLayout
+    validation_summary: ValidationSummary
 
 class Tier(StrEnum):
     standard = 'standard'
@@ -74,6 +132,17 @@ class ArtifactHashes(ContractBase):
     model_config_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
     registration_sha256: Annotated[str, Field(pattern='^[0-9a-f]{64}$')]
 
+class UpstreamRefType(StrEnum):
+    package = 'package'
+
+class UpstreamRef(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: UpstreamRefType
+    ref: Annotated[str, Field(min_length=1)]
+    digest: Annotated[str, Field(pattern='^[a-f0-9]{64}$')]
+
 class PipelineManifestPayload(ContractBase):
     model_config = ConfigDict(
         extra='forbid',
@@ -85,6 +154,51 @@ class PipelineManifestPayload(ContractBase):
     tier: Tier
     generated_at: AwareDatetime
     artifact_hashes: ArtifactHashes
+    upstream_refs: Annotated[
+        list[UpstreamRef] | None,
+        Field(
+            description="Chain-of-custody links to upstream manifests. The pipeline's signature covers this array.",
+            validate_default=True,
+        ),
+    ] = []
+
+class PirDataType(StrEnum):
+    string = 'string'
+    int = 'int'
+    float = 'float'
+    bool = 'bool'
+    date = 'date'
+    datetime = 'datetime'
+    decimal = 'decimal'
+
+class PirInput(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    name: Annotated[str, Field(pattern='^[a-z][a-z0-9_]*$')]
+    type: PirDataType
+    source: Annotated[str, Field(min_length=1)]
+    description: str | None = None
+    nullable: bool | None = False
+
+class PirOutput(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    name: Annotated[str, Field(pattern='^[a-z][a-z0-9_]*$')]
+    type: PirDataType
+    description: str | None = None
+
+class PirMapping(ContractBase):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    mapping_version: Literal[1]
+    model_name: Annotated[str, Field(pattern='^[a-z][a-z0-9-]{2,63}$')]
+    model_version: Annotated[str, Field(pattern='^\\d+\\.\\d+\\.\\d+$')]
+    inputs: list[PirInput]
+    outputs: list[PirOutput]
+    notes: str | None = None
 
 class ApprovalStatus(StrEnum):
     pending = 'pending'

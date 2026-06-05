@@ -97,3 +97,36 @@ def pipelines_tree(tmp_path, unsigned_envelope):
     two.mkdir(parents=True)
     (two / "manifest.json").write_text(json.dumps(other_envelope, sort_keys=True, indent=2) + "\n")
     return root
+
+
+@pytest.fixture
+def packages_and_pipelines_tree(tmp_path, unsigned_envelope):
+    """Build a fixture with BOTH a packages/ tree and a pipelines/ tree that
+    contain manifests for the SAME model_name + version. Exercises T15's
+    dual-root signing loop where `credit-risk-pd@1.0.0` exists in both roots
+    and must land at distinct S3 keys (one per subject_type).
+
+    Returns (packages_root, pipelines_root, tmp_path).
+    """
+    # Package envelope: same model_name/version but subject_type="package".
+    pkg_envelope = {
+        **unsigned_envelope,
+        "subject_type": "package",
+        "subject_ref": "package:credit-risk-pd:1.0.0",
+    }
+    packages_root = tmp_path / "packages"
+    pkg_dir = packages_root / "credit-risk-pd" / "1.0.0"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "manifest.json").write_text(
+        json.dumps(pkg_envelope, sort_keys=True, indent=2) + "\n"
+    )
+
+    # Pipeline envelope: same model_name/version, subject_type="pipeline".
+    pipelines_root = tmp_path / "pipelines"
+    pipe_dir = pipelines_root / "credit-risk-pd" / "1.0.0"
+    pipe_dir.mkdir(parents=True)
+    (pipe_dir / "manifest.json").write_text(
+        json.dumps(unsigned_envelope, sort_keys=True, indent=2) + "\n"
+    )
+
+    return packages_root, pipelines_root, tmp_path

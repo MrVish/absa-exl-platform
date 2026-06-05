@@ -25,6 +25,28 @@
         "model_config_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "registration_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
       }
+    },
+    "upstream_refs": {
+      "type": "array",
+      "default": [],
+      "description": "Chain-of-custody links to upstream manifests. The pipeline's signature covers this array.",
+      "items": { "$ref": "#/$defs/upstream_ref" }
+    }
+  },
+  "$defs": {
+    "UpstreamRefType": {
+      "type": "string",
+      "enum": ["package"]
+    },
+    "upstream_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "ref", "digest"],
+      "properties": {
+        "type":   { "$ref": "#/$defs/UpstreamRefType" },
+        "ref":    { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
     }
   }
 }

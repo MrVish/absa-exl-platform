@@ -1,0 +1,12 @@
+mapping_version: 1
+model_name: valid-package
+model_version: 1.0.0
+
+inputs:
+  - { name: income_band,   type: float, source: customer.income_band }
+  - { name: tenure_months, type: int,   source: customer.tenure_months }
+  - { name: delinquencies, type: float, source: customer.delinquencies_12m, nullable: true }
+
+outputs:
+  - { name: pd_score, type: float }
+  - { name: risk_band, type: string }

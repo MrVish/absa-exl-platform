@@ -59,7 +59,10 @@ def test_full_ci_happy_path(pipelines_tree, signing_key, kms_client, s3_client):
 
     from manifest_signer.verifier import verify_offline, verify_online
 
-    for s3_key in ("credit-risk-pd/1.0.0/manifest.json", "fraud-detection/0.1.0/manifest.json"):
+    for s3_key in (
+        "pipelines/credit-risk-pd/1.0.0/manifest.json",
+        "pipelines/fraud-detection/0.1.0/manifest.json",
+    ):
         body = s3_client.get_object(Bucket=bucket, Key=s3_key)["Body"].read()
         envelope = json.loads(body)
         assert envelope["signature"] != "UNSIGNED"

@@ -42,3 +42,15 @@ pytest for tests.
 1. Pydantic canonical, JSON Schema generated. Rejected: the audit contract would be
    a generated file living in Python code.
 2. Two hand-maintained definitions. Rejected: they drift.
+
+## Sprint 4 additions (2026-06-04)
+
+Two new schemas join the canonical set:
+- `package-manifest-payload.schema.json` — the envelope payload type Code Intake
+  emits for productized packages. See [ADR-0010](0010-productized-package-contract.md).
+- `pir-mapping.schema.json` — describes the shape of `pir.yaml` shipped inside
+  packages.
+
+Both follow the existing canonical-encoding rules (sort_keys + 2-space indent +
+UTF-8 + trailing newline) and are regenerated into `models.py` via the existing
+`regenerate-models.sh` script.
