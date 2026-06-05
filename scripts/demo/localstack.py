@@ -15,14 +15,23 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from demo.errors import DemoError
+from demo.sessions import LS_ENDPOINT
 
 
 def up(compose_file: Path) -> None:
     """Run `docker compose -f <compose_file> up -d`."""
-    proc = subprocess.run(
-        ["docker", "compose", "-f", str(compose_file), "up", "-d"],
-        capture_output=True,
-    )
+    try:
+        proc = subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "up", "-d"],
+            capture_output=True,
+            timeout=180,  # accommodates LocalStack image first-pull on cold CI
+        )
+    except subprocess.TimeoutExpired as e:
+        raise DemoError(
+            "docker compose up -d hung for 180s without completing. "
+            "Hint: check Docker daemon health (`docker ps`), or pull the "
+            "LocalStack image manually with `docker pull localstack/localstack:3.8.1`."
+        ) from e
     if proc.returncode != 0:
         stderr_text = (
             proc.stderr.decode("utf-8", errors="replace")
@@ -43,7 +52,13 @@ def down(compose_file: Path, *, keep_state: bool) -> None:
     args = ["docker", "compose", "-f", str(compose_file), "down"]
     if not keep_state:
         args.append("-v")
-    proc = subprocess.run(args, capture_output=True)
+    try:
+        proc = subprocess.run(args, capture_output=True, timeout=30)
+    except subprocess.TimeoutExpired as e:
+        raise DemoError(
+            "docker compose down hung for 30s. Container may be stuck. "
+            "Hint: `docker ps` to check, then `docker kill <container>` if needed."
+        ) from e
     if proc.returncode != 0:
         stderr_text = (
             proc.stderr.decode("utf-8", errors="replace")
@@ -88,7 +103,7 @@ class LocalStackHealthClient:
 
 
 def wait_healthy(
-    endpoint: str = "http://localhost:4566",
+    endpoint: str = LS_ENDPOINT,
     *,
     required_services: tuple[str, ...] = ("kms", "s3", "dynamodb", "sts", "iam"),
     timeout_s: float = 60.0,
