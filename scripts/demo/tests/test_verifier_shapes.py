@@ -146,7 +146,11 @@ def test_verifier_raises_on_registry_404() -> None:
         patch(
             "demo.verifier._registry_lookup",
             side_effect=urllib.error.HTTPError(
-                "http://localhost:8080/models/x/versions/y", 404, "Not Found", {}, None
+                "http://localhost:8080/models/x/versions/y",
+                404,
+                "Not Found",
+                __import__("email.message", fromlist=["Message"]).Message(),
+                None,
             ),
         ),
     ):

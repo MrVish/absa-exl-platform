@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from demo.chain import (
     ProducerResult,
     _compute_payload_digest,
@@ -242,5 +243,7 @@ def test_producer_result_is_frozen_dataclass() -> None:
         registry_record_id="rec_abc123",
         chain_digest="a" * 64,
     )
-    with pytest.raises(Exception):  # FrozenInstanceError
+    import dataclasses
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
         result.registry_record_id = "rec_other"  # type: ignore[misc]

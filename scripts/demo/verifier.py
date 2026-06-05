@@ -54,7 +54,7 @@ def _verify_offline_envelope(envelope: dict[str, Any], *, pem: bytes) -> None:
     Imports inline so the test suite can patch this symbol without
     touching the manifest_signer module directly.
     """
-    from manifest_signer.verifier import verify_offline  # type: ignore[import-untyped]
+    from manifest_signer.verifier import verify_offline
 
     verify_offline(envelope, public_key_pem=pem)
 
