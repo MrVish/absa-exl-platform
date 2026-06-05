@@ -65,3 +65,38 @@ def test_step_failed_writes_red_prefix(capsys: pytest.CaptureFixture[str]) -> No
     captured = capsys.readouterr()
     assert "FAIL" in captured.out or "✗" in captured.out
     assert "code-intake validate" in captured.out
+
+
+def test_write_markdown_escapes_pipe_characters(tmp_path: Path) -> None:
+    """Pipe characters in messages don't break the Markdown table."""
+    t = Transcript(use_color=False)
+    t.step("exl-prod-sim", "s3://bucket/key | manifest_uri")
+    report_path = tmp_path / "t.md"
+    t.write_markdown(report_path)
+    contents = report_path.read_text(encoding="utf-8")
+    assert "\\|" in contents, f"pipe not escaped; row text: {contents!r}"
+    # And the row should still have exactly 5 column separators after the leading |
+    table_lines = [
+        line for line in contents.splitlines() if line.startswith("|") and "exl-prod-sim" in line
+    ]
+    assert len(table_lines) == 1
+    # Count un-escaped pipes (escape sequence \| should not count as a separator)
+    bare_pipes = table_lines[0].replace("\\|", "").count("|")
+    assert bare_pipes == 6, f"expected 6 cell separators, got {bare_pipes} in {table_lines[0]!r}"
+
+
+def test_step_and_step_failed_align_message_column(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The message text starts at the same column for both ok and FAIL lines."""
+    t = Transcript(use_color=False)
+    t.step("exl-prod-sim", "ok-message")
+    t.step_failed("exl-prod-sim", "fail-message", exit_code=1)
+    captured = capsys.readouterr()
+    ok_line, fail_line, *_ = captured.out.strip().splitlines()
+    ok_msg_col = ok_line.index("ok-message")
+    fail_msg_col = fail_line.index("fail-message")
+    assert ok_msg_col == fail_msg_col, (
+        f"message column misaligned: ok={ok_msg_col} fail={fail_msg_col}\n"
+        f"ok:   {ok_line!r}\nfail: {fail_line!r}"
+    )

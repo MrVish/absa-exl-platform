@@ -16,6 +16,11 @@ from typing import Literal
 AccountLabel = Literal["exl-prod-sim", "absa-sim", "demo"]
 
 
+def _md_escape(s: str) -> str:
+    """Escape pipe characters for Markdown table cells."""
+    return s.replace("|", "\\|")
+
+
 @dataclass(frozen=True)
 class _Entry:
     """One line of the transcript."""
@@ -89,7 +94,13 @@ class Transcript:
 
     def _emit(self, entry: _Entry) -> None:
         prefix = f"[{entry.account}]"
-        marker = "X FAIL " if entry.failed else "  "
+        # Use ASCII "X FAIL" rather than U+2717 BALLOT X for Windows cp1252
+        # terminal compatibility. The committed sample transcripts must round-trip
+        # through `git show` on any developer's terminal without mojibake. If we
+        # ever set PYTHONIOENCODING=utf-8 at the demo entry point and verify it
+        # survives all CI / Windows / macOS paths, we can switch back to the
+        # Unicode glyph for sharper visual distinction.
+        marker = "X FAIL " if entry.failed else "       "
         dur = f"  ({entry.duration_s:.2f}s)" if entry.duration_s is not None else ""
         line = f"{prefix:<18} {marker}{entry.message}{dur}"
         if entry.failed and entry.exit_code is not None:
@@ -113,11 +124,8 @@ class Transcript:
             dur = f"{e.duration_s:.2f}s" if e.duration_s is not None else ""
             result = f"FAIL exit={e.exit_code}" if e.failed else "ok"
             lines.append(
-                f"| {e.timestamp_s:.2f} | [{e.account}] | {e.message} | {dur} | {result} |"
+                f"| {e.timestamp_s:.2f} | [{_md_escape(e.account)}] | "
+                f"{_md_escape(e.message)} | {_md_escape(dur)} | {_md_escape(result)} |"
             )
         lines.append("")
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    @property
-    def entries(self) -> list[_Entry]:
-        return list(self._entries)
