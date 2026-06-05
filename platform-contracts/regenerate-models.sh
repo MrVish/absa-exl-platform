@@ -53,7 +53,8 @@ out_path = Path(sys.argv[2])
 files = sorted(src_dir.glob("*.py"))
 
 # Track what we've seen
-seen_class_names: set[str] = set()
+# name -> (source file that first defined it, normalised class source text)
+seen_classes: dict[str, tuple[Path, str]] = {}
 seen_future_imports: set[str] = set()
 seen_imports: dict[str, set[str]] = {}  # module -> set of names
 
@@ -79,12 +80,25 @@ for fpath in files:
             raise RuntimeError(f"Unexpected bare 'import' in {fpath}: {ast.dump(node)} — update the merger.")
         elif isinstance(node, ast.ClassDef):
             name = node.name
-            if name in seen_class_names:
-                continue
-            seen_class_names.add(name)
             start = node.lineno - 1
             end = node.end_lineno
             class_src = "\n".join(lines[start:end])
+            # Compare on AST-normalised source so trailing whitespace differences
+            # don't masquerade as real collisions.
+            class_key = ast.unparse(node)
+            if name in seen_classes:
+                prev_path, prev_key = seen_classes[name]
+                if prev_key != class_key:
+                    raise RuntimeError(
+                        f"Class name collision: '{name}' is defined with different bodies in "
+                        f"{prev_path} and {fpath}.\n"
+                        f"Two source schemas produced the same class name with different shapes. "
+                        f"Disambiguate by giving the schema's definitions unique names - "
+                        f"e.g. promote the inline enum/object to $defs with a distinctive key, "
+                        f"or set a JSON Schema 'title' on the colliding type."
+                    )
+                continue
+            seen_classes[name] = (fpath, class_key)
             all_class_blocks.append(class_src)
 
 # Build the output file
