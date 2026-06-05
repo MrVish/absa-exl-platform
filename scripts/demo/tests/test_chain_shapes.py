@@ -92,8 +92,10 @@ def test_run_producer_chain_calls_subprocesses_in_order(
         result.returncode = 0
         if "sign-all" in args:
             result.stdout = b"[signed] credit-risk-pd@1.0.0 -> s3://...\n"
-        elif args[-1] == "register":
-            result.stdout = b"record_id=rec_abc123\n"
+        elif "register" in args:
+            result.stdout = (
+                b"{'status': 'created', 'body': {'pk': 'pipeline#credit-risk-pd', 'sk': '1.0.0'}}\n"
+            )
         else:
             result.stdout = b""
         result.stderr = b""
@@ -116,7 +118,7 @@ def test_run_producer_chain_calls_subprocesses_in_order(
         "generate-pipeline generate",
         "manifest-signer sign-all",
         "manifest-signer publish-key",
-        "register-pipeline register",
+        "generate-pipeline register",
     ]
     assert cli_names == expected, f"got order: {cli_names}"
 
