@@ -44,10 +44,7 @@ class StaticPythonChecker:
         return Finding(
             severity="error",
             code="PY998",
-            message=(
-                f"{tool_name} timed out after {self.timeout_seconds}s "
-                f"on {python_dir}"
-            ),
+            message=(f"{tool_name} timed out after {self.timeout_seconds}s on {python_dir}"),
             hint=(
                 "Increase the timeout_seconds constructor kwarg on "
                 "StaticPythonChecker, or investigate why the tool is hanging "
@@ -131,9 +128,7 @@ class StaticPythonChecker:
                     timeout_seconds=self.timeout_seconds,
                 )
             except subprocess.TimeoutExpired:
-                findings.append(
-                    self._timeout_finding("pytest --collect-only", python_dir)
-                )
+                findings.append(self._timeout_finding("pytest --collect-only", python_dir))
             else:
                 if pytest_collect.returncode != 0:
                     findings.append(

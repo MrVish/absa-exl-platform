@@ -64,10 +64,7 @@ class TestsChecker:
                 Finding(
                     severity="error",
                     code="TST998",
-                    message=(
-                        f"pytest timed out after {self.timeout_seconds}s "
-                        f"on {python_dir}"
-                    ),
+                    message=(f"pytest timed out after {self.timeout_seconds}s on {python_dir}"),
                     hint=(
                         "Increase the timeout_seconds constructor kwarg on "
                         "TestsChecker, or investigate why pytest is hanging "
