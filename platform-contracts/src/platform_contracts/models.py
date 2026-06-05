@@ -163,13 +163,13 @@ class PipelineManifestPayload(ContractBase):
     ] = []
 
 class PirDataType(StrEnum):
-    string = 'string'
-    int = 'int'
-    float = 'float'
-    bool = 'bool'
-    date = 'date'
-    datetime = 'datetime'
-    decimal = 'decimal'
+    STRING_TYPE = 'string'
+    INT_TYPE = 'int'
+    FLOAT_TYPE = 'float'
+    BOOL_TYPE = 'bool'
+    DATE_TYPE = 'date'
+    DATETIME_TYPE = 'datetime'
+    DECIMAL_TYPE = 'decimal'
 
 class PirInput(ContractBase):
     model_config = ConfigDict(
