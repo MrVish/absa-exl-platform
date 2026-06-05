@@ -1,0 +1,125 @@
+name: localstack-demo
+
+on:
+  pull_request:
+    paths:
+      - "code-intake/**"
+      - "pipeline-factory/**"
+      - "manifest-signer/**"
+      - "registry/api/**"
+      - "terraform/modules/pipeline-registry/**"
+      - "terraform/modules/signing-foundation/**"
+      - "platform-contracts/**"
+      - "packages/credit-risk-pd/**"
+      - "pipelines/credit-risk-pd/**"
+      - "pipeline-factory/configs/credit-risk-pd/**"
+      - "scripts/demo/**"
+      - "infra/localstack/**"
+      - ".github/workflows/localstack-demo.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+  push:
+    branches: [main]
+    paths:
+      - "code-intake/**"
+      - "pipeline-factory/**"
+      - "manifest-signer/**"
+      - "registry/api/**"
+      - "terraform/modules/pipeline-registry/**"
+      - "terraform/modules/signing-foundation/**"
+      - "platform-contracts/**"
+      - "packages/credit-risk-pd/**"
+      - "pipelines/credit-risk-pd/**"
+      - "pipeline-factory/configs/credit-risk-pd/**"
+      - "scripts/demo/**"
+      - "infra/localstack/**"
+      - ".github/workflows/localstack-demo.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+
+concurrency:
+  group: localstack-demo-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: uv sync
+        run: uv sync --frozen --all-extras
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+          terraform_wrapper: false
+
+      - name: Pull LocalStack image
+        run: docker pull localstack/localstack:3.8.1
+        timeout-minutes: 2
+
+      - name: Run demo
+        id: demo
+        env:
+          PYTHONPATH: scripts
+        run: |
+          set +e
+          uv run python -m demo run --no-color --no-cleanup --transcript demo-transcript.md
+          ec=$?
+          echo "exit_code=$ec" >> $GITHUB_OUTPUT
+          exit $ec
+
+      - name: Upload transcript on success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-transcript
+          path: demo-transcript.md
+          retention-days: 14
+
+      - name: Upload failure bundle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-failure-bundle
+          path: |
+            demo-transcript.md
+            infra/localstack/terraform/terraform.tfstate
+            infra/localstack/.uvicorn.log
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Annotate failure exit code
+        if: failure()
+        run: |
+          ec="${{ steps.demo.outputs.exit_code }}"
+          case "$ec" in
+            1) echo "::error::Chain verification failed (platform regression). See demo-failure-bundle artifact." ;;
+            2) echo "::warning::Demo infrastructure failure (not a platform regression)." ;;
+            3) echo "::warning::Demo teardown failed (CI runner discarded)." ;;
+            *) echo "::error::Demo failed with unexpected exit code $ec" ;;
+          esac
+
+      - name: Soft-fail on infra issues
+        if: failure() && steps.demo.outputs.exit_code != '1'
+        run: |
+          echo "::notice::Demo infra issue (exit ${{ steps.demo.outputs.exit_code }}); not blocking merge."
+          exit 0
+
+      - name: Always tear down
+        if: always()
+        run: |
+          docker compose -f infra/localstack/docker-compose.yml down -v || true
+          rm -f infra/localstack/.uvicorn.pid infra/localstack/.uvicorn.log
