@@ -143,10 +143,19 @@ def sign_all_cmd(
             version = signed["payload"]["version"]
             # Namespace by subject_type so packages/<name>/<ver>/manifest.json
             # and pipelines/<name>/<ver>/manifest.json don't collide on the
-            # same S3 key. The fallback to "pipeline" preserves backward
-            # compatibility with any legacy envelope missing subject_type —
-            # the schema requires it, so this is defense-in-depth.
-            subject_type = signed.get("subject_type", "pipeline")
+            # same S3 key. Strict on unknown values: schema is the source of
+            # truth, so any subject_type we don't recognise indicates the
+            # signer needs upgrading. Silent fallback to "pipeline" would
+            # misroute a future format (e.g. "dataset") into the pipelines/
+            # prefix, where the IfNoneMatch="*" idempotency story would
+            # silently mask the misroute as [skip-existing] on a re-run.
+            subject_type = signed.get("subject_type")
+            if subject_type not in ("package", "pipeline"):
+                raise click.ClickException(
+                    f"unknown subject_type {subject_type!r} for {manifest_path}; "
+                    f"manifest-signer needs upgrading to support new subject types. "
+                    f"Expected one of: package, pipeline."
+                )
             prefix = "packages" if subject_type == "package" else "pipelines"
             s3_key = f"{prefix}/{name}/{version}/manifest.json"
 
