@@ -19,6 +19,7 @@ def test_package_manifest_payload_minimum_valid():
                 "test_files": [{"path": "python/tests/test_score.py", "sha256": "c" * 64}],
                 "pir_ref": {"path": "pir.yaml", "sha256": "d" * 64},
                 "model_config_ref": {"path": "model_config.yaml", "sha256": "e" * 64},
+                "python_pyproject_ref": {"path": "python/pyproject.toml", "sha256": "f" * 64},
             },
             "validation_summary": {
                 "ran_at": "2026-06-04T12:00:00+00:00",

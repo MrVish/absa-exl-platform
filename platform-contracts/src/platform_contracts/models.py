@@ -106,6 +106,7 @@ class PackageLayout(ContractBase):
     test_files: list[FileRef]
     pir_ref: FileRef
     model_config_ref: FileRef
+    python_pyproject_ref: FileRef
 
 class PackageManifestPayload(ContractBase):
     model_config = ConfigDict(

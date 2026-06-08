@@ -33,9 +33,16 @@ def _code_intake_version() -> str:
 
 
 def _file_ref(package_path: Path, file_path: Path) -> dict[str, str]:
+    # Normalize CRLF -> LF before hashing so the manifest digest is stable
+    # across platforms (Windows checkouts may have CRLF text files via
+    # autocrlf; Linux/macOS use LF). All hashed file types in a package are
+    # text (yaml, py, toml, sas) so this normalization is always safe; for
+    # any future binary file types, a separate code path would be needed.
+    raw = file_path.read_bytes()
+    normalized = raw.replace(b"\r\n", b"\n")
     return {
         "path": str(file_path.relative_to(package_path).as_posix()),
-        "sha256": hashlib.sha256(file_path.read_bytes()).hexdigest(),
+        "sha256": hashlib.sha256(normalized).hexdigest(),
     }
 
 
@@ -48,10 +55,21 @@ def _build_layout(package_path: Path) -> dict[str, Any]:
     python_dir = package_path / "python"
     python_files: list[dict[str, str]] = []
     test_files: list[dict[str, str]] = []
+    # Directories that must never appear in the hashed payload:
+    #   - .venv/       (leaks from `uv pip install` even with --python; see venv.py)
+    #   - __pycache__/ (bytecode caches; non-deterministic)
+    #   - .pytest_cache/, .ruff_cache/, .mypy_cache/ (tool caches)
+    _EXCLUDE_DIRS = frozenset(
+        {".venv", "__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache"}
+    )
     if python_dir.is_dir():
         for py in sorted(python_dir.rglob("*.py")):
+            rel_parts = py.relative_to(python_dir).parts
+            # Skip any file under an excluded directory anywhere in the tree
+            if any(part in _EXCLUDE_DIRS for part in rel_parts):
+                continue
             # Walk only the in-package tests/ subdir (NOT absolute path "tests/")
-            if "tests" in py.relative_to(python_dir).parts:
+            if "tests" in rel_parts:
                 test_files.append(_file_ref(package_path, py))
             else:
                 python_files.append(_file_ref(package_path, py))
@@ -62,6 +80,11 @@ def _build_layout(package_path: Path) -> dict[str, Any]:
         "test_files": test_files,
         "pir_ref": _file_ref(package_path, package_path / "pir.yaml"),
         "model_config_ref": _file_ref(package_path, package_path / "model_config.yaml"),
+        # Per Sprint 2 §7.3: cryptographically anchor python deps so an attacker
+        # can't swap pyproject.toml between sign and verify to change what gets
+        # installed in the per-package venv. The build will hard-fail if the
+        # file is missing — packages are required to declare deps per spec §5.3.
+        "python_pyproject_ref": _file_ref(package_path, python_dir / "pyproject.toml"),
     }
 
 

@@ -34,8 +34,18 @@ class TestsChecker:
     # warns when it's imported into a test module and finds the `__init__`.
     __test__ = False
 
-    def __init__(self, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(
+        self,
+        timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+        *,
+        env_vars: dict[str, str] | None = None,
+    ) -> None:
         self.timeout_seconds = timeout_seconds
+        # env_vars=None means 'inherit os.environ' (workspace toolchain).
+        # When set (typically by the orchestrator from a venv context),
+        # pytest is invoked inside that venv so test deps resolve from
+        # the venv's site-packages, not the workspace's.
+        self.env_vars = env_vars
 
     def run(self, package_path: Path) -> CheckResult:
         tests_dir = package_path / "python" / "tests"
@@ -58,6 +68,7 @@ class TestsChecker:
                 ],
                 cwd=str(python_dir),
                 timeout_seconds=self.timeout_seconds,
+                env=self.env_vars,
             )
         except subprocess.TimeoutExpired:
             findings.append(

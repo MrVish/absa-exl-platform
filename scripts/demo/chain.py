@@ -107,14 +107,14 @@ def run_producer_chain(
 
     # 3.1 code-intake validate
     _run_cli(
-        ["uv", "run", "code-intake", "validate", str(package_path), "--strict"],
+        ["uv", "run", "code-intake", "validate", "--package", str(package_path), "--strict"],
         step_name="3.1 code-intake validate",
         transcript=transcript,
     )
 
     # 3.2 code-intake generate-manifest
     _run_cli(
-        ["uv", "run", "code-intake", "generate-manifest", str(package_path)],
+        ["uv", "run", "code-intake", "generate-manifest", "--package", str(package_path)],
         step_name="3.2 code-intake generate-manifest",
         transcript=transcript,
     )
@@ -148,8 +148,8 @@ def run_producer_chain(
             "run",
             "generate-pipeline",
             "generate",
-            "credit-risk-pd",
-            "1.0.0",
+            "--config",
+            "pipeline-factory/configs/credit-risk-pd/1.0.0/model_config.yaml",
             "--force",
         ],
         step_name="3.4 generate-pipeline generate",
@@ -247,7 +247,12 @@ def run_producer_chain(
         step_name="3.6 manifest-signer publish-key",
         transcript=transcript,
     )
-    public_key_uri = f"s3://{endpoints.public_key_bucket}/v1/public-key.pem"
+    # publish-key writes to s3://<bucket>/manifest-signing/<key_id>/<version>.pem
+    # — see manifest_signer.publisher.publish_public_key. Verifier needs this
+    # exact path because the bucket policy only grants public read on
+    # manifest-signing/*.
+    _key_id = endpoints.kms_key_arn.rsplit("/", 1)[-1]
+    public_key_uri = f"s3://{endpoints.public_key_bucket}/manifest-signing/{_key_id}/v1.pem"
 
     # 3.7 generate-pipeline register
     # The register subcommand of generate-pipeline POSTs the registration

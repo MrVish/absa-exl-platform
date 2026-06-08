@@ -13,11 +13,12 @@ def test_valid_pir_passes():
     assert result.checker == "pir"
 
 
-def test_broken_pir_unmapped_column_returns_pir002():
+def test_broken_pir_unmapped_column_returns_pir001():
+    """Literal column ref missing from PIR -> PIR001 (error)."""
     result = PirChecker().run(FIXTURES / "broken_pir")
     assert not result.passed
     codes = {f.code for f in result.findings}
-    assert "PIR002" in codes
+    assert "PIR001" in codes
 
 
 def test_extract_columns_subscript():

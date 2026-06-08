@@ -17,13 +17,17 @@
     "package_layout": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sas_files", "python_files", "test_files", "pir_ref", "model_config_ref"],
+      "required": [
+        "sas_files", "python_files", "test_files", "pir_ref",
+        "model_config_ref", "python_pyproject_ref"
+      ],
       "properties": {
-        "sas_files":         { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
-        "python_files":      { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
-        "test_files":        { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
-        "pir_ref":           { "$ref": "#/$defs/file_ref" },
-        "model_config_ref":  { "$ref": "#/$defs/file_ref" }
+        "sas_files":           { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
+        "python_files":        { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
+        "test_files":          { "type": "array", "items": { "$ref": "#/$defs/file_ref" } },
+        "pir_ref":             { "$ref": "#/$defs/file_ref" },
+        "model_config_ref":    { "$ref": "#/$defs/file_ref" },
+        "python_pyproject_ref": { "$ref": "#/$defs/file_ref" }
       }
     },
     "validation_summary": {

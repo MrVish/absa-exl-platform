@@ -53,10 +53,15 @@ def run_with_timeout(
     *,
     timeout_seconds: int,
     cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Like `subprocess.run(cmd, capture_output=True, text=True,
     timeout=timeout_seconds)`, but on timeout it kills the *whole*
     process tree before re-raising `subprocess.TimeoutExpired`.
+
+    `env` is passed through to subprocess.Popen verbatim; pass None
+    (the default) to inherit os.environ, or a dict to override entirely
+    (typically a venv-activated env produced by code_intake.venv).
 
     Raises:
         subprocess.TimeoutExpired: if the process tree did not exit
@@ -72,6 +77,7 @@ def run_with_timeout(
             stderr=subprocess.PIPE,
             text=True,
             cwd=cwd_str,
+            env=env,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
     else:
@@ -81,6 +87,7 @@ def run_with_timeout(
             stderr=subprocess.PIPE,
             text=True,
             cwd=cwd_str,
+            env=env,
             start_new_session=True,
         )
     try:

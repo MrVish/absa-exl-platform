@@ -1,5 +1,5 @@
 {
-  "digest": "3b1134c4775a2b58ea8a57888a33e12ec697ea86fe6f905020427dcefabcbdf6",
+  "digest": "654d040760572c54879c05154cc9b9c9a7af0b6faa504a20a0755e5bd6355028",
   "digest_algorithm": "SHA-256",
   "payload": {
     "code_intake_version": "0.1.0",
@@ -8,7 +8,7 @@
     "package_layout": {
       "model_config_ref": {
         "path": "model_config.yaml",
-        "sha256": "544e544c3378132b82edacc96a53e07da7700fbd3319903d9cb24006285bcc1e"
+        "sha256": "eaa4a43b34f25f4335b30e1e6415114da3299b06ee1845e0fe5a1bf1f48b2ffc"
       },
       "pir_ref": {
         "path": "pir.yaml",
@@ -24,6 +24,10 @@
           "sha256": "2f4d5147177e042ead95d4ea7027dd70ddd802312087a3cd1f92b8e6e9362f4e"
         }
       ],
+      "python_pyproject_ref": {
+        "path": "python/pyproject.toml",
+        "sha256": "392661b1eae058e5c32b1015bf1d99df8d54af75de3279d67e52501a55de6338"
+      },
       "sas_files": [
         {
           "path": "sas/score.sas",
@@ -43,12 +47,6 @@
         {
           "codes": [],
           "finding_count": 0,
-          "name": "static_python",
-          "passed": true
-        },
-        {
-          "codes": [],
-          "finding_count": 0,
           "name": "static_sas",
           "passed": true
         },
@@ -61,13 +59,19 @@
         {
           "codes": [],
           "finding_count": 0,
-          "name": "tests",
+          "name": "pir",
           "passed": true
         },
         {
           "codes": [],
           "finding_count": 0,
-          "name": "pir",
+          "name": "static_python",
+          "passed": true
+        },
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "tests",
           "passed": true
         }
       ],

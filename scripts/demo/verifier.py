@@ -42,9 +42,20 @@ def _fetch_package_envelope(session: Any, *, bucket: str) -> dict[str, Any]:
     return cast(dict[str, Any], json.loads(body))
 
 
-def _fetch_public_key_pem(session: Any, *, bucket: str) -> bytes:
+def _fetch_public_key_pem(session: Any, *, bucket: str, key_arn: str, version: str = "v1") -> bytes:
+    """Fetch the published PEM from S3.
+
+    The publish-key CLI (manifest_signer.publisher.publish_public_key) writes
+    the PEM to s3://<bucket>/manifest-signing/<key_id>/<version>.pem where
+    key_id is the last URI segment of the KMS key ARN. The signing-foundation
+    module's bucket policy grants public read only under manifest-signing/*,
+    so we MUST use this canonical path — fetching from /v1/public-key.pem
+    would be 403 cross-account.
+    """
     s3 = session.client("s3", endpoint_url=LS_ENDPOINT)
-    body = s3.get_object(Bucket=bucket, Key="v1/public-key.pem")["Body"].read()
+    key_id = key_arn.rsplit("/", 1)[-1]
+    s3_key = f"manifest-signing/{key_id}/{version}.pem"
+    body = s3.get_object(Bucket=bucket, Key=s3_key)["Body"].read()
     return cast(bytes, body)
 
 
@@ -122,7 +133,9 @@ def run_verifier_chain(
     # 4.3 fetch public-key PEM
     try:
         started = time.monotonic()
-        pem = _fetch_public_key_pem(session, bucket=endpoints.public_key_bucket)
+        pem = _fetch_public_key_pem(
+            session, bucket=endpoints.public_key_bucket, key_arn=endpoints.kms_key_arn
+        )
         transcript.step(
             "absa-sim",
             "4.3 fetch public-key PEM (cross-account)",
