@@ -37,8 +37,18 @@ DEFAULT_TIMEOUT_SECONDS = 120
 class StaticPythonChecker:
     name = "static_python"
 
-    def __init__(self, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(
+        self,
+        timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+        *,
+        env_vars: dict[str, str] | None = None,
+    ) -> None:
         self.timeout_seconds = timeout_seconds
+        # env_vars=None means 'inherit os.environ' (workspace toolchain).
+        # When set (typically by the orchestrator from a venv context),
+        # every subprocess invocation uses this env so ruff/mypy/pytest
+        # resolve from the venv's bin/ dir.
+        self.env_vars = env_vars
 
     def _timeout_finding(self, tool_name: str, python_dir: Path) -> Finding:
         return Finding(
@@ -73,6 +83,7 @@ class StaticPythonChecker:
             ruff = run_with_timeout(
                 ["uv", "run", "ruff", "check", str(python_dir)],
                 timeout_seconds=self.timeout_seconds,
+                env=self.env_vars,
             )
         except subprocess.TimeoutExpired:
             findings.append(self._timeout_finding("ruff", python_dir))
@@ -91,6 +102,7 @@ class StaticPythonChecker:
             mypy = run_with_timeout(
                 ["uv", "run", "mypy", "--strict", str(python_dir)],
                 timeout_seconds=self.timeout_seconds,
+                env=self.env_vars,
             )
         except subprocess.TimeoutExpired:
             findings.append(self._timeout_finding("mypy", python_dir))
@@ -126,6 +138,7 @@ class StaticPythonChecker:
                     ],
                     cwd=str(python_dir),
                     timeout_seconds=self.timeout_seconds,
+                    env=self.env_vars,
                 )
             except subprocess.TimeoutExpired:
                 findings.append(self._timeout_finding("pytest --collect-only", python_dir))
