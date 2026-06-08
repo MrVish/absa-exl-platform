@@ -37,9 +37,7 @@ class VenvContext:
 
 
 @contextlib.contextmanager
-def create_ephemeral_venv(
-    package_path: Path, *, timeout_s: int = 180
-) -> Iterator[VenvContext]:
+def create_ephemeral_venv(package_path: Path, *, timeout_s: int = 180) -> Iterator[VenvContext]:
     """Create a fresh venv, install deps from python/pyproject.toml,
     yield VenvContext, tear down on exit (even on exception).
     """
@@ -85,8 +83,7 @@ def create_ephemeral_venv(
             raise VenvCreationError(
                 code="PY998",
                 message=(
-                    f"uv pip install -e failed: "
-                    f"{result.stderr.decode('utf-8', errors='replace')}"
+                    f"uv pip install -e failed: {result.stderr.decode('utf-8', errors='replace')}"
                 ),
                 hint=(
                     "Check that python/pyproject.toml has valid syntax and "
@@ -96,8 +93,10 @@ def create_ephemeral_venv(
                 ),
             )
 
-        python_path = tmpdir / ("Scripts" if sys.platform == "win32" else "bin") / (
-            "python.exe" if sys.platform == "win32" else "python"
+        python_path = (
+            tmpdir
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("python.exe" if sys.platform == "win32" else "python")
         )
 
         env_vars: dict[str, str] = {
@@ -107,10 +106,9 @@ def create_ephemeral_venv(
         }
         env_vars.pop("PYTHONHOME", None)
 
-        yield VenvContext(
-            venv_dir=tmpdir, python_path=python_path, env_vars=env_vars
-        )
+        yield VenvContext(venv_dir=tmpdir, python_path=python_path, env_vars=env_vars)
     finally:
+
         def _onexc(func: Any, path: str, exc: BaseException) -> None:
             # On Windows, read-only files (e.g. .pyc files) can block rmtree.
             # Flip the write bit and retry.

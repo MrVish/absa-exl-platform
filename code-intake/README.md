@@ -33,7 +33,7 @@ owns the AWS path.
 | `static_sas`    | Files in `<package>/sas/` are non-empty and have balanced PROC/RUN (structural only) | SAS002 empty · SAS003 PROC/RUN imbalance |
 | `schema`        | `<package>/model_config.yaml` validates against `package-manifest-payload.schema.json` | SCH001 schema validation |
 | `tests`         | `pytest <package>/python/tests/` exits 0 | TST001 collection · TST002 ≥1 test failed · TST998 subprocess timed out (tune `TestsChecker(timeout_seconds=N)`) |
-| `pir`           | `<package>/pir.yaml` validates against `pir-mapping.schema.json` AND every column referenced by Python is in `pir.inputs[]` | PIR001 schema · PIR002 unmapped column |
+| `pir`           | `<package>/pir.yaml` validates against `pir-mapping.schema.json` AND every column referenced by Python is in `pir.inputs[]` | PIR001 unmapped literal column · PIR002 glob matches zero columns (warning) |
 
 The orchestrator runs all five and **never short-circuits**. A checker that
 crashes is wrapped as a single `<CHECKER>999` finding rather than propagating

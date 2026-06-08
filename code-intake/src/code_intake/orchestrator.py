@@ -133,8 +133,7 @@ def _run_one(
 
     if strict:
         elevated = [
-            replace(f, severity="error") if f.severity == "warning" else f
-            for f in result.findings
+            replace(f, severity="error") if f.severity == "warning" else f for f in result.findings
         ]
         still_passed = not any(f.severity == "error" for f in elevated)
         result = replace(result, findings=elevated, passed=still_passed)
