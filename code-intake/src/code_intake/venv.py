@@ -70,9 +70,13 @@ def create_ephemeral_venv(
                 message=f"uv venv failed: {result.stderr.decode('utf-8', errors='replace')}",
             )
 
-        # 2. Install the package in editable mode
+        # 2. Install the package in editable mode with test extras.
+        # We use the `<dir>[extra]` syntax (rather than `--extra test`)
+        # because uv requires the latter to point at a pyproject.toml on
+        # the *requirement* side, not the install target.
+        install_target = f"{package_path / 'python'}[test]"
         result = subprocess.run(
-            ["uv", "pip", "install", "-e", str(package_path / "python"), "--extra", "test"],
+            ["uv", "pip", "install", "-e", install_target],
             capture_output=True,
             timeout=timeout_s,
             env={**os.environ, "VIRTUAL_ENV": str(tmpdir)},
@@ -87,7 +91,7 @@ def create_ephemeral_venv(
                 hint=(
                     "Check that python/pyproject.toml has valid syntax and "
                     "that all declared deps are resolvable. Run "
-                    f"`uv pip install -e {package_path / 'python'} --extra test` "
+                    f"`uv pip install -e {install_target}` "
                     f"locally to reproduce."
                 ),
             )

@@ -42,3 +42,10 @@ __pycache__/
 .ruff_cache/
 dist/
 *.egg-info/
+
+# Per-package uv.lock side-effects from `code-intake validate`'s ephemeral
+# venv (it runs `uv pip install -e <pkg>/python[test]` which leaks a
+# uv.lock into the package source dir). The workspace's own uv.lock at
+# the repo root IS committed; only the per-package ones are noise.
+packages/*/*/python/uv.lock
+code-intake/tests/fixtures/*/python/uv.lock
