@@ -107,14 +107,14 @@ def run_producer_chain(
 
     # 3.1 code-intake validate
     _run_cli(
-        ["uv", "run", "code-intake", "validate", str(package_path), "--strict"],
+        ["uv", "run", "code-intake", "validate", "--package", str(package_path), "--strict"],
         step_name="3.1 code-intake validate",
         transcript=transcript,
     )
 
     # 3.2 code-intake generate-manifest
     _run_cli(
-        ["uv", "run", "code-intake", "generate-manifest", str(package_path)],
+        ["uv", "run", "code-intake", "generate-manifest", "--package", str(package_path)],
         step_name="3.2 code-intake generate-manifest",
         transcript=transcript,
     )
@@ -148,8 +148,8 @@ def run_producer_chain(
             "run",
             "generate-pipeline",
             "generate",
-            "credit-risk-pd",
-            "1.0.0",
+            "--config",
+            "pipeline-factory/configs/credit-risk-pd/1.0.0/model_config.yaml",
             "--force",
         ],
         step_name="3.4 generate-pipeline generate",
