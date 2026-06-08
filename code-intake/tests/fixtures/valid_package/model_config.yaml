@@ -17,6 +17,9 @@ package_layout:
   model_config_ref:
     path: "model_config.yaml"
     sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+  python_pyproject_ref:
+    path: "python/pyproject.toml"
+    sha256: "0000000000000000000000000000000000000000000000000000000000000000"
 
 validation_summary:
   ran_at: "2026-06-04T00:00:00+00:00"

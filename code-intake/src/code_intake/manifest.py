@@ -62,6 +62,11 @@ def _build_layout(package_path: Path) -> dict[str, Any]:
         "test_files": test_files,
         "pir_ref": _file_ref(package_path, package_path / "pir.yaml"),
         "model_config_ref": _file_ref(package_path, package_path / "model_config.yaml"),
+        # Per Sprint 2 §7.3: cryptographically anchor python deps so an attacker
+        # can't swap pyproject.toml between sign and verify to change what gets
+        # installed in the per-package venv. The build will hard-fail if the
+        # file is missing — packages are required to declare deps per spec §5.3.
+        "python_pyproject_ref": _file_ref(package_path, python_dir / "pyproject.toml"),
     }
 
 

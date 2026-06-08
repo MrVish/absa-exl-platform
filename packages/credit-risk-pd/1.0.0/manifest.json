@@ -1,5 +1,5 @@
 {
-  "digest": "3b1134c4775a2b58ea8a57888a33e12ec697ea86fe6f905020427dcefabcbdf6",
+  "digest": "9246e8242369b82faa84ab6a5acb6c161497c602568bc6f379eeeab91ad70159",
   "digest_algorithm": "SHA-256",
   "payload": {
     "code_intake_version": "0.1.0",
@@ -8,44 +8,50 @@
     "package_layout": {
       "model_config_ref": {
         "path": "model_config.yaml",
-        "sha256": "544e544c3378132b82edacc96a53e07da7700fbd3319903d9cb24006285bcc1e"
+        "sha256": "80de4792d974e34529ce058afd1b93789827f6acea36afda37fac91eae4705f7"
       },
       "pir_ref": {
         "path": "pir.yaml",
-        "sha256": "d45facf803fc8e8164e5666417264e241aced2f7d9570dc25df4bebeb261bc1e"
+        "sha256": "96d03b8121adc99813d760240d66719ea7ea136dcf732e19c2362a0ee867fc94"
       },
       "python_files": [
         {
+          "path": "python/.venv/Lib/site-packages/_virtualenv.py",
+          "sha256": "6cf30c56faf2a55228914dbbd17f8088ed371ebb08f5e7fa6fd931f913fcaf1d"
+        },
+        {
+          "path": "python/.venv/Scripts/activate_this.py",
+          "sha256": "03ba16542a0efa29cddbe1da9fbc2ca91a9517baefdc9f1d21f69f00af7df8fc"
+        },
+        {
           "path": "python/conftest.py",
-          "sha256": "88781673f7b00dbb76b643e7684101f9c107bd6ea6bfa0f9904b7c7f892ad490"
+          "sha256": "f906e6313f2e5465573aeb1b683164e54efc32504a3b98c1ce4c7a5ad274b448"
         },
         {
           "path": "python/score.py",
-          "sha256": "2f4d5147177e042ead95d4ea7027dd70ddd802312087a3cd1f92b8e6e9362f4e"
+          "sha256": "d7883fe2baf6e6558b001dd5e318877374350d7300225359ff3504a5825d15a4"
         }
       ],
+      "python_pyproject_ref": {
+        "path": "python/pyproject.toml",
+        "sha256": "392661b1eae058e5c32b1015bf1d99df8d54af75de3279d67e52501a55de6338"
+      },
       "sas_files": [
         {
           "path": "sas/score.sas",
-          "sha256": "5a9b62b8b1d5231605dde853366d24c74ab05d9708a3756cd3554f1d3b0ddfdb"
+          "sha256": "1fc3fbeee6da33c0d8e38454e08c12b1c9dd192b8596c5e1a6174e7e34314008"
         }
       ],
       "test_files": [
         {
           "path": "python/tests/test_score.py",
-          "sha256": "153c78ec74822ab1582a229c86b9985fc780f627c6914f1d03890950af1f6cc4"
+          "sha256": "f25986be736e8a78a33151fe6115ad0db757c5877b8398799abad33344e53679"
         }
       ]
     },
     "schema_version": 1,
     "validation_summary": {
       "checks": [
-        {
-          "codes": [],
-          "finding_count": 0,
-          "name": "static_python",
-          "passed": true
-        },
         {
           "codes": [],
           "finding_count": 0,
@@ -61,13 +67,19 @@
         {
           "codes": [],
           "finding_count": 0,
-          "name": "tests",
+          "name": "pir",
           "passed": true
         },
         {
           "codes": [],
           "finding_count": 0,
-          "name": "pir",
+          "name": "static_python",
+          "passed": true
+        },
+        {
+          "codes": [],
+          "finding_count": 0,
+          "name": "tests",
           "passed": true
         }
       ],
