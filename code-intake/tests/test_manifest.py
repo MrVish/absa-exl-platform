@@ -57,9 +57,12 @@ def test_build_payload_computes_file_hashes_from_disk(sample_results):
         generated_at="2026-06-04T00:00:00+00:00",
     )
     layout = payload["package_layout"]
-    # python_files[0] is python/score.py — verify its hash matches on-disk
+    # python_files[0] is python/score.py — verify its hash matches the
+    # CRLF-normalized on-disk bytes. The manifest builder normalizes line
+    # endings before hashing so the digest is stable across Windows
+    # (CRLF) and Linux (LF) checkouts; the test mirrors that normalization.
     score_path = FIXTURES / "valid_package" / "python" / "score.py"
-    expected = hashlib.sha256(score_path.read_bytes()).hexdigest()
+    expected = hashlib.sha256(score_path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     python_files = layout["python_files"]
     assert any(f["sha256"] == expected for f in python_files), (
         f"score.py hash {expected} not found in {[f['sha256'] for f in python_files]}"

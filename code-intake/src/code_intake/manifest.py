@@ -33,9 +33,16 @@ def _code_intake_version() -> str:
 
 
 def _file_ref(package_path: Path, file_path: Path) -> dict[str, str]:
+    # Normalize CRLF -> LF before hashing so the manifest digest is stable
+    # across platforms (Windows checkouts may have CRLF text files via
+    # autocrlf; Linux/macOS use LF). All hashed file types in a package are
+    # text (yaml, py, toml, sas) so this normalization is always safe; for
+    # any future binary file types, a separate code path would be needed.
+    raw = file_path.read_bytes()
+    normalized = raw.replace(b"\r\n", b"\n")
     return {
         "path": str(file_path.relative_to(package_path).as_posix()),
-        "sha256": hashlib.sha256(file_path.read_bytes()).hexdigest(),
+        "sha256": hashlib.sha256(normalized).hexdigest(),
     }
 
 
