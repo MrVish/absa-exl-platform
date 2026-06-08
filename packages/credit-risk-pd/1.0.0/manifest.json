@@ -1,5 +1,5 @@
 {
-  "digest": "9246e8242369b82faa84ab6a5acb6c161497c602568bc6f379eeeab91ad70159",
+  "digest": "7905ac3a51b0076e71c3b129fd071eec177d87196ccb715ad5a8ede2e9c8870b",
   "digest_algorithm": "SHA-256",
   "payload": {
     "code_intake_version": "0.1.0",
@@ -15,14 +15,6 @@
         "sha256": "96d03b8121adc99813d760240d66719ea7ea136dcf732e19c2362a0ee867fc94"
       },
       "python_files": [
-        {
-          "path": "python/.venv/Lib/site-packages/_virtualenv.py",
-          "sha256": "6cf30c56faf2a55228914dbbd17f8088ed371ebb08f5e7fa6fd931f913fcaf1d"
-        },
-        {
-          "path": "python/.venv/Scripts/activate_this.py",
-          "sha256": "03ba16542a0efa29cddbe1da9fbc2ca91a9517baefdc9f1d21f69f00af7df8fc"
-        },
         {
           "path": "python/conftest.py",
           "sha256": "f906e6313f2e5465573aeb1b683164e54efc32504a3b98c1ce4c7a5ad274b448"

@@ -72,12 +72,25 @@ def create_ephemeral_venv(package_path: Path, *, timeout_s: int = 180) -> Iterat
         # We use the `<dir>[extra]` syntax (rather than `--extra test`)
         # because uv requires the latter to point at a pyproject.toml on
         # the *requirement* side, not the install target.
-        install_target = f"{package_path / 'python'}[test]"
+        #
+        # CRITICAL: pass --python explicitly to the tmpdir venv's interpreter.
+        # Without this, uv inspects the working directory for a pyproject.toml
+        # (or walks into the install target's dir) and may CREATE A NEW
+        # `.venv/` inside packages/<name>/<version>/python/ as a side effect,
+        # which then leaks into the package's hashed payload via
+        # _build_layout's rglob("*.py"). Bound the install to OUR tmpdir.
+        install_target = f"{(package_path / 'python').resolve()}[test]"
+        python_path_pre = (
+            tmpdir
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("python.exe" if sys.platform == "win32" else "python")
+        )
         result = subprocess.run(
-            ["uv", "pip", "install", "-e", install_target],
+            ["uv", "pip", "install", "-e", install_target, "--python", str(python_path_pre)],
             capture_output=True,
             timeout=timeout_s,
             env={**os.environ, "VIRTUAL_ENV": str(tmpdir)},
+            cwd=tmpdir,  # neutral cwd so uv can't find any other pyproject.toml
         )
         if result.returncode != 0:
             raise VenvCreationError(

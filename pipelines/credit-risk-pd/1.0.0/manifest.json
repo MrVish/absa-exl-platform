@@ -1,5 +1,5 @@
 {
-  "digest": "2d040cdf33eec6a752027ebda97fe972fe344d88262df4ae0ab919b22a2b1c81",
+  "digest": "fd392bce7fdaece0a6bdb980a6368bcbabc940ea3bb9c6b7b8f52bdc8a49322a",
   "digest_algorithm": "SHA-256",
   "payload": {
     "artifact_hashes": {
@@ -15,7 +15,7 @@
     "tier": "standard",
     "upstream_refs": [
       {
-        "digest": "9246e8242369b82faa84ab6a5acb6c161497c602568bc6f379eeeab91ad70159",
+        "digest": "7905ac3a51b0076e71c3b129fd071eec177d87196ccb715ad5a8ede2e9c8870b",
         "ref": "credit-risk-pd@1.0.0",
         "type": "package"
       }

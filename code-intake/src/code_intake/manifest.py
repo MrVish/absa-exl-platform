@@ -48,10 +48,21 @@ def _build_layout(package_path: Path) -> dict[str, Any]:
     python_dir = package_path / "python"
     python_files: list[dict[str, str]] = []
     test_files: list[dict[str, str]] = []
+    # Directories that must never appear in the hashed payload:
+    #   - .venv/       (leaks from `uv pip install` even with --python; see venv.py)
+    #   - __pycache__/ (bytecode caches; non-deterministic)
+    #   - .pytest_cache/, .ruff_cache/, .mypy_cache/ (tool caches)
+    _EXCLUDE_DIRS = frozenset(
+        {".venv", "__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache"}
+    )
     if python_dir.is_dir():
         for py in sorted(python_dir.rglob("*.py")):
+            rel_parts = py.relative_to(python_dir).parts
+            # Skip any file under an excluded directory anywhere in the tree
+            if any(part in _EXCLUDE_DIRS for part in rel_parts):
+                continue
             # Walk only the in-package tests/ subdir (NOT absolute path "tests/")
-            if "tests" in py.relative_to(python_dir).parts:
+            if "tests" in rel_parts:
                 test_files.append(_file_ref(package_path, py))
             else:
                 python_files.append(_file_ref(package_path, py))
