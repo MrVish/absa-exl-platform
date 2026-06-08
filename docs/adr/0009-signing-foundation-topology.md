@@ -163,3 +163,10 @@ Asymmetric KMS rotation is the inverse of standard symmetric rotation:
    signed by `v1` continue to verify against `v1`'s public key.
 7. Retire `v1` only after all referenced manifests have expired (Phase 3
    ops decision).
+
+**For the full step-by-step rotation procedure**, see the runbook at
+[`docs/runbooks/kms-key-rotation.md`](../runbooks/kms-key-rotation.md)
+(Phase 3 Sprint 3 deliverable). It covers triggers, pre-rotation
+checklist, the 6-step rotation, dual-key verification smoke-tests,
+and the explicit non-actions (don't delete old CMK, don't delete old
+PEMs, don't re-sign historical manifests).

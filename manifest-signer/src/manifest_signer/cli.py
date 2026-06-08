@@ -237,6 +237,99 @@ def verify_offline_cmd(manifest: Path, public_key: Path) -> None:
     click.echo("OK")
 
 
+@main.command("verify-from-bucket")
+@click.option(
+    "--bucket",
+    required=True,
+    help="S3 bucket holding the signed manifest envelope",
+)
+@click.option(
+    "--key",
+    required=True,
+    help="S3 object key for the manifest (e.g. pipelines/credit-risk-pd/1.0.0/manifest.json)",
+)
+@click.option(
+    "--public-key-bucket",
+    default=None,
+    help="S3 bucket holding the published PEM (default: same as --bucket)",
+)
+@click.option(
+    "--public-key-uri",
+    default=None,
+    help=(
+        "Override PEM s3 URI. If omitted, derived from envelope.signing_key_arn "
+        "+ version (manifest-signing/<key_id>/<version>.pem)"
+    ),
+)
+@click.option(
+    "--version",
+    default="v1",
+    help="PEM version suffix used in the derived path (default: v1)",
+)
+def verify_from_bucket_cmd(
+    bucket: str,
+    key: str,
+    public_key_bucket: str | None,
+    public_key_uri: str | None,
+    version: str,
+) -> None:
+    """One-shot offline verification of a manifest already in S3.
+
+    Fetches the envelope, derives or accepts the PEM URI, fetches the PEM,
+    runs verify_offline. Exits 0 on valid, 1 on invalid (or any fetch
+    failure), with a diagnostic on stderr.
+    """
+    s3 = boto3.client("s3")
+
+    # 1. Fetch envelope from s3://<bucket>/<key>
+    try:
+        envelope_bytes = s3.get_object(Bucket=bucket, Key=key)["Body"].read()
+        envelope = json.loads(envelope_bytes)
+    except Exception as e:
+        click.echo(f"FAIL: could not fetch s3://{bucket}/{key}: {e}", err=True)
+        sys.exit(1)
+
+    # 2. Derive PEM URI if not given
+    if public_key_uri:
+        # Parse s3://bucket/key
+        if not public_key_uri.startswith("s3://"):
+            click.echo(
+                f"FAIL: --public-key-uri must be an s3:// URI, got {public_key_uri!r}",
+                err=True,
+            )
+            sys.exit(1)
+        pk_bucket, _, pk_key = public_key_uri[5:].partition("/")
+    else:
+        key_arn = envelope.get("signing_key_arn", "")
+        key_id = key_arn.rsplit("/", 1)[-1] if key_arn else ""
+        if not key_id:
+            click.echo(
+                "FAIL: envelope has no signing_key_arn -- cannot derive PEM path. "
+                "Use --public-key-uri explicitly.",
+                err=True,
+            )
+            sys.exit(1)
+        pk_bucket = public_key_bucket or bucket
+        pk_key = f"manifest-signing/{key_id}/{version}.pem"
+
+    # 3. Fetch PEM
+    try:
+        pem_bytes = s3.get_object(Bucket=pk_bucket, Key=pk_key)["Body"].read()
+    except Exception as e:
+        click.echo(f"FAIL: could not fetch PEM at s3://{pk_bucket}/{pk_key}: {e}", err=True)
+        sys.exit(1)
+
+    # 4. Verify
+    try:
+        verify_offline(envelope, public_key_pem=pem_bytes)
+    except VerificationError as e:
+        click.echo(f"FAIL: {e}", err=True)
+        sys.exit(1)
+
+    click.echo(f"OK  manifest: s3://{bucket}/{key}")
+    click.echo(f"    pem:      s3://{pk_bucket}/{pk_key}")
+
+
 @main.command("publish-key")
 @click.option("--key-arn", required=True)
 @click.option("--bucket", required=True)
