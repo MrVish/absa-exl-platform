@@ -29,15 +29,34 @@ owns the AWS path.
 
 | Checker | Validates | Failure codes |
 |---|---|---|
-| `static_python` | `ruff check` + `mypy --strict` + `pytest --collect-only` against `<package>/python/` | PY001 ruff · PY002 mypy · PY003 pytest discovery |
+| `static_python` | `ruff check` + `mypy --strict` + `pytest --collect-only` against `<package>/python/` | PY001 ruff · PY002 mypy · PY003 pytest discovery · PY998 subprocess timed out (tune `StaticPythonChecker(timeout_seconds=N)`) |
 | `static_sas`    | Files in `<package>/sas/` are non-empty and have balanced PROC/RUN (structural only) | SAS002 empty · SAS003 PROC/RUN imbalance |
 | `schema`        | `<package>/model_config.yaml` validates against `package-manifest-payload.schema.json` | SCH001 schema validation |
-| `tests`         | `pytest <package>/python/tests/` exits 0 | TST001 collection · TST002 ≥1 test failed |
+| `tests`         | `pytest <package>/python/tests/` exits 0 | TST001 collection · TST002 ≥1 test failed · TST998 subprocess timed out (tune `TestsChecker(timeout_seconds=N)`) |
 | `pir`           | `<package>/pir.yaml` validates against `pir-mapping.schema.json` AND every column referenced by Python is in `pir.inputs[]` | PIR001 schema · PIR002 unmapped column |
 
 The orchestrator runs all five and **never short-circuits**. A checker that
 crashes is wrapped as a single `<CHECKER>999` finding rather than propagating
-the exception.
+the exception. A checker whose subprocess exceeds its `timeout_seconds`
+emits a `<CHECKER>998` finding, distinct from `999` so operators can tell
+"checker timed out" apart from "checker threw an exception".
+
+### Deferred checks
+
+Some validation rules in ADR-0010 are intentionally deferred to manifest-
+build time rather than the checker stage. They need cross-cutting context
+(the full payload + the extracted column set) that no single checker has.
+
+| Code | Check | Where it runs |
+|------|-------|---------------|
+| SCH002 | Schema-version drift between code and contracted schema | `code_intake.manifest.build_package_payload` (deferred from `schema.py`) |
+| SCH003 | PIR mapping references columns not present in extracted set | `code_intake.manifest.build_package_payload` (deferred from `pir.py`) |
+
+Both deferrals are intentional: they run at manifest-build time because
+they need data not available during per-checker execution. See ADR-0010
+"Deferred checks".
+
+Grep for `DEFERRED-CHECK:` in the code to find the anchor sites.
 
 ## Don't hand-edit `manifest.json`
 

@@ -7,9 +7,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+# Re-export so ``from pipeline_factory.upstream_resolver import GeneratorError``
+# keeps working. The canonical definition lives in errors.py.
+from .errors import GeneratorError
 
-class GeneratorError(Exception):
-    """Raised when pipeline generation can't resolve a required input."""
+__all__ = ["GeneratorError", "resolve_upstream_refs"]
 
 
 def resolve_upstream_refs(

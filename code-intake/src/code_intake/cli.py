@@ -52,6 +52,8 @@ def _summarise(results: list[CheckResult], *, as_json: bool) -> str:
                                 "message": f.message,
                                 "file": f.file,
                                 "line": f.line,
+                                "hint": f.hint,
+                                "location": f.location,
                             }
                             for f in r.findings
                         ],
@@ -71,6 +73,10 @@ def _summarise(results: list[CheckResult], *, as_json: bool) -> str:
             if f.file:
                 location = f.file + (f":{f.line}" if f.line else "")
                 lines.append(f"        at {location}")
+            elif f.location:
+                lines.append(f"        at {f.location}")
+            if f.hint:
+                lines.append(f"        hint: {f.hint}")
     overall = "PASSED" if all(r.passed for r in results) else "FAILED"
     lines.append(f"\nOverall: {overall}")
     return "\n".join(lines)

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 
+import boto3
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi.responses import JSONResponse
 from platform_contracts.loader import validate as validate_contract
 
 from .api_models import CreateModelRequest, UpdateModelRequest
@@ -34,9 +38,46 @@ def _principal(request: Request) -> str:
         return "local-dev"
 
 
-@router.get("/healthz")
+@router.get("/healthz", tags=["health"])
 def healthz() -> dict[str, str]:
+    """Liveness probe -- does NOT check downstream dependencies.
+
+    Returns 200 as long as the FastAPI process is responsive. Used by
+    uvicorn_runner.py during demo orchestration to detect that the process
+    has started, and by container orchestrators (k8s, ECS) for liveness.
+    """
     return {"status": "ok"}
+
+
+@router.get("/readyz", tags=["health"])
+def readyz() -> JSONResponse:
+    """Readiness probe -- checks the DynamoDB table is accessible.
+
+    Returns 200 if the registry can serve traffic, 503 otherwise. Used by
+    uvicorn_runner.py to know when to allow the demo's producer chain to
+    start calling /models endpoints.
+    """
+    settings = get_settings()
+    client = boto3.client(
+        "dynamodb",
+        region_name=settings.region,
+        endpoint_url=os.environ.get("AWS_ENDPOINT_URL_DYNAMODB"),
+    )
+    try:
+        # DescribeTable is a lightweight metadata call (no row scan / no read units).
+        client.describe_table(TableName=settings.table_name)
+    except client.exceptions.ResourceNotFoundException:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "reason": "table_not_found"},
+        )
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code", "Unknown")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "reason": f"ddb_error: {code}"},
+        )
+    return JSONResponse(status_code=200, content={"status": "ready"})
 
 
 @router.post("/models", status_code=status.HTTP_201_CREATED)

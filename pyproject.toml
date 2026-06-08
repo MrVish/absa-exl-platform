@@ -25,6 +25,9 @@ extend-exclude = [
     "platform-contracts/src/platform_contracts/models.py",
     "code-intake/tests/fixtures/broken_python",
 ]
+# scripts/demo/ is not a uv workspace member (spec §10.4) so include it
+# explicitly so `ruff check <subdir>` and editor integrations cover it.
+extend-include = ["scripts/demo/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
@@ -32,11 +35,46 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+# Default scope when mypy is invoked without arguments. CI still passes
+# explicit paths (.github/workflows/python-validate.yml); this list mainly
+# serves local invocations and editor integrations.
+#
+# Intentionally excludes `packages/` and `code-intake/tests/fixtures/` from the
+# default scope: both contain a top-level `score.py` module, and mypy cannot
+# resolve duplicate top-level module names. The static_python checker
+# (code-intake/src/code_intake/checkers/python.py) runs mypy on these paths
+# explicitly with an isolated working directory, so excluding them globally is
+# safe — they're only ever type-checked one fixture at a time.
+files = [
+    "platform-contracts/src",
+    "registry/api/src",
+    "pipeline-factory/src",
+    "manifest-signer/src",
+    "code-intake/src",
+    "scripts/demo",
+]
 
 [[tool.mypy.overrides]]
 module = ["moto.*", "mangum.*", "boto3.*", "botocore.*", "mypy_boto3_kms.*", "mypy_boto3_s3.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# Multiple fixtures (code-intake/tests/fixtures/*/python/score.py) plus the
+# worked-example package (packages/credit-risk-pd/1.0.0/python/score.py)
+# all expose a top-level `score` module. They're intentional duplicates
+# (each fixture is a self-contained package layout); mypy can't tell them
+# apart under its default discovery. Replaces scattered per-file
+# `# type: ignore` comments (which drift) with a single workspace override.
+module = "score"
+ignore_errors = true
+
 [tool.pytest.ini_options]
 addopts = "-q --import-mode=importlib"
-testpaths = ["platform-contracts/tests", "registry/api/tests", "pipeline-factory/tests", "manifest-signer/tests", "code-intake/tests"]
+testpaths = [
+    "platform-contracts/tests",
+    "registry/api/tests",
+    "pipeline-factory/tests",
+    "manifest-signer/tests",
+    "code-intake/tests",
+    "scripts/demo/tests",
+]

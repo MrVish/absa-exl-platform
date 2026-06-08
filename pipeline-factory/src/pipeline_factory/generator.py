@@ -7,10 +7,15 @@ from typing import Any
 import yaml
 from platform_contracts.loader import validate as validate_contract
 
+from .errors import GeneratorError, PipelineDriftError
 from .hashing import canonical_json, sha256_of_text, terraform_fmt
 from .manifest import build_envelope, build_payload
 from .renderer import render_pipeline_tf, render_statemachine
 from .upstream_resolver import resolve_upstream_refs
+
+# Re-export PipelineDriftError + GeneratorError so existing
+# ``from pipeline_factory.generator import PipelineDriftError`` keeps working.
+__all__ = ["GeneratorError", "OUTPUTS_ROOT", "PipelineDriftError", "generate", "load_config"]
 
 OUTPUTS_ROOT = Path("pipelines")
 
@@ -30,10 +35,6 @@ def _existing_manifest_timestamps(out_dir: Path) -> tuple[str | None, str | None
         return generated_at, signed_at
     except (json.JSONDecodeError, OSError):
         return None, None
-
-
-class PipelineDriftError(Exception):
-    """Raised when re-generating would change a file that already exists, without --force."""
 
 
 def load_config(path: Path) -> dict[str, Any]:

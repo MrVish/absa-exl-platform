@@ -46,6 +46,26 @@
 | **SARB GOI 3 — model risk governance** | The generator can only create `pending` records; CAB + IVU still required to flip to `approved` (gate is server-side in the Registry API) | `registry/api/src/registry_api/transitions.py`, `pipeline-factory/src/pipeline_factory/registration.py` | ABSA Model Risk |
 | **ISO 27001 A.14.2 — secure development** | Drift gate (CI re-render + `git diff --exit-code`) + golden-file tests ensure generated artifacts are reproducible bit-for-bit | `.github/workflows/pipeline-factory.yml`, `pipeline-factory/tests/test_golden_fixture.py` | EXL Platform Engineering |
 
+## Phase 2 controls (sprint 3 — Signing Foundation, ADR-0009)
+
+| Control | Implementation | Evidence artifact | Owner |
+| --- | --- | --- | --- |
+| **ISO 27001 A.10.1.1 — policy on the use of cryptographic controls** | Mandatory KMS-asymmetric signing of every manifest envelope (RSASSA_PKCS1_V1_5_SHA_256) with signer ARN + algorithm captured in the envelope | `docs/adr/0009-signing-foundation-topology.md`, `manifest-signer/src/manifest_signer/signer.py`, `manifest-signer/src/manifest_signer/verifier.py` | EXL Platform Engineering |
+| **ISO 27001 A.10.1.2 — key management** | Per-tier KMS CMKs with rotation enabled; key topology + ARN allow-list documented in ADR-0009 | `docs/adr/0009-signing-foundation-topology.md`, `terraform/modules/manifest-signing/main.tf` | EXL Platform Engineering |
+| **SOC 2 CC6.1 — logical access (signing keys)** | IAM-scoped `kms:Sign` permission restricted to the pipeline-factory + code-intake CI roles; cross-account verification uses `kms:Verify` only | `terraform/modules/manifest-signing/iam.tf`, `manifest-signer/src/manifest_signer/cli.py` | EXL Platform Engineering |
+| **SOC 2 CC6.6 — encryption of evidence** | All committed manifests carry a non-`UNSIGNED` signature post-CI; verifier rejects sentinel-signature envelopes | `manifest-signer/src/manifest_signer/signer.py` (`UNSIGNED_SENTINEL`), `manifest-signer/tests/test_verifier_online.py` | EXL Platform Engineering |
+| **SOC 2 CC6.8 — restricted access to crypto material** | Private keys never leave KMS; only the public key is published to `published-keys/` S3 prefix for offline verification | `manifest-signer/src/manifest_signer/cli.py` (`publish-key`), `docs/adr/0009-signing-foundation-topology.md` | EXL Platform Engineering |
+
+## Phase 2 controls (sprint 4 — Productized Package Contract, ADR-0010)
+
+| Control | Implementation | Evidence artifact | Owner |
+| --- | --- | --- | --- |
+| **ISO 27001 A.12.1.1 — documented operating procedures** | Five-checker pipeline (static_python, static_sas, schema, tests, pir) runs on every package; finding codes (PY00x, SAS00x, SCH00x, TST00x, PIR00x) documented in code-intake/README.md | `code-intake/README.md`, `code-intake/src/code_intake/checkers/`, `docs/adr/0010-productized-package-contract.md` | EXL Platform Engineering |
+| **ISO 27001 A.12.1.2 — change management** | `manifest.json` is generated, not hand-edited; CI enforces byte-stability via `git diff --exit-code packages/`; every change must regenerate from upstream sources | `code-intake/src/code_intake/manifest.py`, `code-intake/README.md` ("Don't hand-edit manifest.json") | EXL Platform Engineering |
+| **ISO 27001 A.14.2.2 — system change control procedures** | Package manifest digest covers all artifact bytes (SHA-256 per file); upstream-ref chain links package -> pipeline -> registry record so any post-approval change to source code invalidates the chain | `code-intake/src/code_intake/manifest.py` (`_file_ref`, `_build_layout`), `pipeline-factory/src/pipeline_factory/upstream_resolver.py` | EXL Platform Engineering |
+| **SOC 2 CC7.1 — system operations (validation evidence)** | Validation summary records each checker's pass/fail + finding codes + ran_at into the signed envelope; CAB can re-execute the same checkers against the same fixture and reproduce results | `code-intake/src/code_intake/manifest.py` (`_build_validation_summary`), `code-intake/tests/test_e2e_track_a.py` | EXL Platform Engineering |
+| **SOC 2 CC8.1 — change control framework** | Two deferred checks (SCH002 schema-version drift, SCH003 PIR referential integrity) marked `DEFERRED-CHECK:` in code with manifest-build-time enforcement per ADR-0010 | `code-intake/src/code_intake/manifest.py` (DEFERRED-CHECK markers), `code-intake/README.md` ("Deferred checks") | EXL Platform Engineering |
+
 ## Out-of-matrix items (deferred)
 
 The following control rows belong to later phases and will be added to this matrix when the corresponding modules land:

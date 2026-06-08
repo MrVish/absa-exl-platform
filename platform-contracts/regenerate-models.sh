@@ -49,6 +49,50 @@ from pathlib import Path
 src_dir = Path(sys.argv[1])
 out_path = Path(sys.argv[2])
 
+# T16/F8: rename PirDataType enum MEMBERS to *_TYPE so they don't shadow
+# Python builtins (int, float, bool, str, ...). Wire format (the StrEnum
+# *values*) is unchanged. Without this, a typo like `pir_type = int` inside
+# the platform-contracts module body would silently rebind the builtin to
+# the enum class member.
+ENUM_MEMBER_RENAMES = {
+    "int": "INT_TYPE",
+    "float": "FLOAT_TYPE",
+    "bool": "BOOL_TYPE",
+    "string": "STRING_TYPE",
+    "date": "DATE_TYPE",
+    "datetime": "DATETIME_TYPE",
+    "decimal": "DECIMAL_TYPE",
+}
+
+
+def _rename_pir_data_type_members_in_text(class_src: str) -> str:
+    """Rename PirDataType assignments to non-shadowing names.
+
+    Operates on the raw source text of the class block so formatting stays
+    byte-stable. Matches lines of the form "    name = '...'" inside the
+    PirDataType class body.
+    """
+    lines = class_src.splitlines()
+    out_lines: list[str] = []
+    inside_pir = False
+    for line in lines:
+        if line.startswith("class PirDataType"):
+            inside_pir = True
+            out_lines.append(line)
+            continue
+        if inside_pir:
+            # End of class body: a non-indented non-empty line.
+            if line and not line.startswith((" ", "\t")):
+                inside_pir = False
+                out_lines.append(line)
+                continue
+            m = re.match(r"^(\s+)([a-z_][a-z0-9_]*)(\s*=\s*.*)$", line)
+            if m and m.group(2) in ENUM_MEMBER_RENAMES:
+                line = f"{m.group(1)}{ENUM_MEMBER_RENAMES[m.group(2)]}{m.group(3)}"
+        out_lines.append(line)
+    return "\n".join(out_lines)
+
+
 # Process in deterministic (alphabetical) order derived from generated files
 files = sorted(src_dir.glob("*.py"))
 
@@ -83,9 +127,15 @@ for fpath in files:
             start = node.lineno - 1
             end = node.end_lineno
             class_src = "\n".join(lines[start:end])
-            # Compare on AST-normalised source so trailing whitespace differences
-            # don't masquerade as real collisions.
-            class_key = ast.unparse(node)
+            # Apply PirDataType member rename BEFORE collision-key normalisation
+            # so a second pass over the same schema is byte-stable.
+            if name == "PirDataType":
+                class_src = _rename_pir_data_type_members_in_text(class_src)
+                class_key = ast.unparse(ast.parse(class_src).body[0])
+            else:
+                # Compare on AST-normalised source so trailing whitespace differences
+                # don't masquerade as real collisions.
+                class_key = ast.unparse(node)
             if name in seen_classes:
                 prev_path, prev_key = seen_classes[name]
                 if prev_key != class_key:

@@ -13,7 +13,12 @@ class Finding:
 
     `severity` is "error" or "warning". `code` is the checker-prefixed
     identifier (e.g. PY001, SAS003, PIR002) so log lines are self-describing.
-    `file` and `line` are optional location hints.
+    `file` and `line` are optional location hints inside the package.
+    `hint` is an optional human-readable remediation suggestion (e.g.
+    "Increase --timeout-seconds on StaticPythonChecker"); operators see
+    this alongside the error message. `location` is an optional path-level
+    pointer used by failures that aren't tied to a specific file (e.g. a
+    subprocess timeout on the whole python/ directory).
     """
 
     severity: str
@@ -21,6 +26,8 @@ class Finding:
     message: str
     file: str | None = None
     line: int | None = None
+    hint: str | None = None
+    location: str | None = None
 
 
 @dataclass(frozen=True)
