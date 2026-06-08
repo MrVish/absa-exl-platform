@@ -12,6 +12,7 @@ PIR config flag.
 from __future__ import annotations
 
 import ast
+import fnmatch
 from pathlib import Path
 from typing import Any, cast
 
@@ -99,7 +100,8 @@ class _ConstantPropagator(ast.NodeVisitor):
             # to glob conversion. This catches the common `n = "col"; data[f"{n}"]`
             # idiom without emitting an over-broad "*" glob.
             non_const = [
-                v for v in slice_node.values
+                v
+                for v in slice_node.values
                 if not (isinstance(v, ast.Constant) and isinstance(v.value, str))
             ]
             if (
@@ -134,6 +136,55 @@ def _extract_column_references(source: str) -> set[str]:
             propagator.visit(node)
             refs.update(propagator.column_refs)
     return refs
+
+
+def _check_column_references_against_pir(refs: set[str], pir_columns: set[str]) -> list[Finding]:
+    """Match extracted column references against PIR-declared columns.
+
+    Literal references missing from the PIR mapping emit ``PIR001`` (error).
+    Glob references (``*`` present) are matched via ``fnmatch.fnmatchcase``;
+    a glob that matches zero declared columns emits ``PIR002`` (warning) —
+    suspicious but not fatal, because globs come from f-string accesses
+    that may be conservative over-approximations.
+
+    Findings are returned sorted by ``(code, message)`` so output is
+    deterministic across runs.
+    """
+    findings: list[Finding] = []
+    for ref in sorted(refs):
+        if "*" in ref:
+            matched = [c for c in pir_columns if fnmatch.fnmatchcase(c, ref)]
+            if not matched:
+                findings.append(
+                    Finding(
+                        severity="warning",
+                        code="PIR002",
+                        message=(
+                            f"column-glob {ref!r} referenced by Python code "
+                            f"matches no entry in pir.inputs[]"
+                        ),
+                        file="pir.yaml",
+                        hint=(
+                            "Glob patterns come from f-string column accesses "
+                            'like data[f"col_{i}"]. If the glob matches no '
+                            "PIR columns, either the code is unreachable or "
+                            "PIR is incomplete."
+                        ),
+                    )
+                )
+        else:
+            if ref not in pir_columns:
+                findings.append(
+                    Finding(
+                        severity="error",
+                        code="PIR001",
+                        message=(
+                            f"column {ref!r} referenced by Python code but not in pir.inputs[]"
+                        ),
+                        file="pir.yaml",
+                    )
+                )
+    return findings
 
 
 class PirChecker:
@@ -191,7 +242,8 @@ class PirChecker:
             )
             return CheckResult(checker=self.name, passed=False, findings=findings)
 
-        # Cross-check: every column referenced by Python sources must be in inputs[]
+        # Cross-check: every column referenced by Python sources must appear in inputs[].
+        # Literal misses -> PIR001 (error); glob misses -> PIR002 (warning).
         pir_inputs = {item["name"] for item in pir_data.get("inputs", [])}
         python_dir = package_path / "python"
         if python_dir.is_dir():
@@ -205,16 +257,7 @@ class PirChecker:
                     continue
                 referenced |= _extract_column_references(py_file.read_text(encoding="utf-8"))
 
-            unmapped = referenced - pir_inputs
-            for col in sorted(unmapped):
-                findings.append(
-                    Finding(
-                        severity="error",
-                        code="PIR002",
-                        message=f"column {col!r} referenced by Python code but not in pir.inputs[]",
-                        file="pir.yaml",
-                    )
-                )
+            findings.extend(_check_column_references_against_pir(referenced, pir_inputs))
 
         passed = not any(f.severity == "error" for f in findings)
         return CheckResult(checker=self.name, passed=passed, findings=findings)

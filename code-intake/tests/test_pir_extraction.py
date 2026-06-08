@@ -1,8 +1,12 @@
-"""Tests for the extended _extract_column_references (PIR T10)."""
+"""Tests for the extended _extract_column_references (PIR T10) and
+the glob-aware column matching against PIR (PIR T11)."""
 
 from __future__ import annotations
 
-from code_intake.checkers.pir import _extract_column_references
+from code_intake.checkers.pir import (
+    _check_column_references_against_pir,
+    _extract_column_references,
+)
 
 
 def test_extracts_literal_subscript() -> None:
@@ -89,3 +93,35 @@ def score_b(data):
     cols = _extract_column_references(src)
     assert "income" in cols
     assert "tenure" in cols
+
+
+# --- T11: glob matching against PIR-declared columns ---
+
+
+def test_glob_matching_emits_pir002_when_glob_misses() -> None:
+    """A glob ref that matches zero PIR columns -> PIR002 (warning)."""
+    refs = {"absent_*"}
+    pir_columns = {"tenure_months", "income_band"}
+    findings = _check_column_references_against_pir(refs, pir_columns)
+    assert len(findings) == 1
+    assert findings[0].code == "PIR002"
+    assert findings[0].severity == "warning"
+    assert "absent_*" in findings[0].message
+
+
+def test_glob_matching_silent_when_glob_hits() -> None:
+    """A glob that matches at least one PIR column produces no finding."""
+    refs = {"month_*"}
+    pir_columns = {"month_1", "month_2", "month_3", "income_band"}
+    findings = _check_column_references_against_pir(refs, pir_columns)
+    assert findings == []
+
+
+def test_literal_miss_still_emits_pir001() -> None:
+    """Non-glob ref missing from PIR -> PIR001 (error), per renumbering."""
+    refs = {"unmapped"}
+    pir_columns = {"income_band"}
+    findings = _check_column_references_against_pir(refs, pir_columns)
+    assert len(findings) == 1
+    assert findings[0].code == "PIR001"
+    assert findings[0].severity == "error"
