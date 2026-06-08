@@ -79,10 +79,14 @@ jobs:
           uv run python -m demo run --no-color --no-cleanup --transcript demo-transcript.md
           ec=$?
           echo "exit_code=$ec" >> $GITHUB_OUTPUT
-          exit $ec
+          # ALWAYS exit 0; the "Gate on demo exit code" step below decides
+          # job status. GitHub aggregates step statuses into the job, so
+          # if this step exited with the demo's exit code we'd never be
+          # able to convert exit 2/3 (infra failures) into job success.
+          exit 0
 
       - name: Upload transcript on success
-        if: success()
+        if: steps.demo.outputs.exit_code == '0'
         uses: actions/upload-artifact@v4
         with:
           name: demo-transcript
@@ -90,7 +94,7 @@ jobs:
           retention-days: 14
 
       - name: Upload failure bundle
-        if: failure()
+        if: steps.demo.outputs.exit_code != '0'
         uses: actions/upload-artifact@v4
         with:
           name: demo-failure-bundle
@@ -101,22 +105,16 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Annotate failure exit code
-        if: failure()
+      - name: Gate on demo exit code
         run: |
           ec="${{ steps.demo.outputs.exit_code }}"
           case "$ec" in
-            1) echo "::error::Chain verification failed (platform regression). See demo-failure-bundle artifact." ;;
-            2) echo "::warning::Demo infrastructure failure (not a platform regression)." ;;
-            3) echo "::warning::Demo teardown failed (CI runner discarded)." ;;
-            *) echo "::error::Demo failed with unexpected exit code $ec" ;;
+            0) echo "::notice::Demo passed (chain verified end-to-end)." ;;
+            1) echo "::error::Chain verification failed (platform regression). See demo-failure-bundle artifact." ; exit 1 ;;
+            2) echo "::warning::Demo infrastructure failure (not a platform regression); not blocking merge." ;;
+            3) echo "::warning::Demo teardown failed (CI runner discarded); not blocking merge." ;;
+            *) echo "::error::Demo failed with unexpected exit code $ec" ; exit 1 ;;
           esac
-
-      - name: Soft-fail on infra issues
-        if: failure() && steps.demo.outputs.exit_code != '1'
-        run: |
-          echo "::notice::Demo infra issue (exit ${{ steps.demo.outputs.exit_code }}); not blocking merge."
-          exit 0
 
       - name: Always tear down
         if: always()
