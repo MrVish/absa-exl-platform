@@ -247,7 +247,12 @@ def run_producer_chain(
         step_name="3.6 manifest-signer publish-key",
         transcript=transcript,
     )
-    public_key_uri = f"s3://{endpoints.public_key_bucket}/v1/public-key.pem"
+    # publish-key writes to s3://<bucket>/manifest-signing/<key_id>/<version>.pem
+    # — see manifest_signer.publisher.publish_public_key. Verifier needs this
+    # exact path because the bucket policy only grants public read on
+    # manifest-signing/*.
+    _key_id = endpoints.kms_key_arn.rsplit("/", 1)[-1]
+    public_key_uri = f"s3://{endpoints.public_key_bucket}/manifest-signing/{_key_id}/v1.pem"
 
     # 3.7 generate-pipeline register
     # The register subcommand of generate-pipeline POSTs the registration
