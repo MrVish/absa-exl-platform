@@ -74,11 +74,13 @@ managed centrally.
 | `.github/workflows/...` | `ci/jenkins/examples/...` | AWS auth | Notes |
 |---|---|---|---|
 | `python-validate.yml` | `python-validate.Jenkinsfile` | none | Lowest-risk port — proves library wiring |
-| `code-intake.yml` | `code-intake.Jenkinsfile` (TODO) | none | Same shape as `python-validate` |
-| `terraform-validate.yml` | `terraform-validate.Jenkinsfile` (TODO) | dummy creds | Uses `postPrComment` step |
+| `code-intake.yml` | `code-intake.Jenkinsfile` | none | Same shape as `python-validate` |
+| `terraform-validate.yml` | `terraform-validate.Jenkinsfile` | dummy creds | Two parallel matrices (6 modules, 14 stacks), soft-fail tfsec/checkov |
 | `pipeline-factory.yml` | `pipeline-factory.Jenkinsfile` | IRSA / assume-role | 3-stage; drift gate commits back |
-| `publish-signing-key.yml` | `publish-signing-key.Jenkinsfile` (TODO) | IRSA / assume-role | Manual trigger from runbook |
-| `localstack-demo.yml` | `localstack-demo.Jenkinsfile` (TODO) | none | Needs docker on agent |
+| `publish-signing-key.yml` | `publish-signing-key.Jenkinsfile` (TODO) | IRSA / assume-role | Held until ABSA identity model is locked (see [ADR-0011](../../docs/adr/0011-ci-platform-jenkins.md) §"Open questions") |
+| `localstack-demo.yml` | `localstack-demo.Jenkinsfile` | none | Needs docker on agent; preserves the 0/1/2/3 exit-code gate semantics |
 
-The two examples checked in here cover both patterns (no-AWS and
-AWS-touching). The remaining four follow the same templates.
+Five of six workflows are ported. The remaining one
+(`publish-signing-key`) is held until ABSA confirms the Jenkins identity
+model — porting it now would lock in a trust-policy assumption that may
+need to be rewritten.

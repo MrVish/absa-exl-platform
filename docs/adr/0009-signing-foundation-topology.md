@@ -8,6 +8,14 @@
 | Consulted | ABSA Information Security |
 | Related | [ADR-0003](0003-manifest-signing-kms-asymmetric.md) (parent decision: KMS asymmetric signing), [ADR-0008](0008-generator-runtime-dual-mode.md), [Sprint 3 spec](../superpowers/specs/2026-06-04-absa-exl-phase-2-sprint-3-signing-foundation-design.md) |
 
+> **Note (2026-06-11):** the OIDC provider section
+> (`github_oidc_provider_arn`, `repo_full_name`, `allowed_refs`) is
+> superseded by [ADR-0011: CI Platform — Jenkins](0011-ci-platform-jenkins.md).
+> The KMS hierarchy, S3 keyspace, and registrar role's IAM scope are
+> unchanged. The signer/registrar trust principal will be replaced with
+> a Jenkins identity (IRSA on EKS preferred) once ABSA confirms the
+> EKS cluster topology — see ADR-0011 §"Open questions".
+
 ## Context
 
 ADR-0003 chose KMS asymmetric CMK signing for manifest envelopes but did not
