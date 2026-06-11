@@ -7,6 +7,13 @@
 | Deciders | Engagement lead, EXL Platform Engineering |
 | Consulted | ABSA Information Security |
 
+> **Note (2026-06-11):** sections describing the signer's identity
+> source (GitHub Actions OIDC, `repo:.../ref:...` `sub` claim) are
+> superseded by [ADR-0011: CI Platform — Jenkins](0011-ci-platform-jenkins.md).
+> The asymmetric-key choice, the algorithm, and the canonical-JSON
+> envelope shape remain unchanged. Only the trust-policy principal
+> moves from GitHub OIDC to a Jenkins identity (IRSA on EKS preferred).
+
 ## Context
 
 Two pipelines produce manifests that downstream systems and auditors must verify, potentially years after the fact:

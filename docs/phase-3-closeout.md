@@ -136,3 +136,19 @@ Three sprints, ~50 commits, +5000 LOC across `scripts/demo/`, `code-intake/`, `m
 **Option C — Multi-package scenario fixture (medium, exercises chain).** Add a second package that depends on `credit-risk-pd@1.0.0`. Exercises the `upstream_refs[]` array as more than a one-element-list. Validates the cryptographic chain handles N-deep manifests.
 
 **Recommendation: A (Lambda packaging)** when real-AWS work is on the horizon. Otherwise **C (multi-package)** for the highest demonstrable improvement to the demo's narrative.
+
+---
+
+## Addendum (2026-06-11): Jenkins CI migration kicked off
+
+EXL's enterprise CI standard is Jenkins, not GitHub Actions. [ADR-0011](adr/0011-ci-platform-jenkins.md) captures the swap. **Sprint M1 (Foundation) is delivered** as paperwork:
+
+- ADR-0011 committed (Status: Proposed pending ABSA confirmation of the EKS identity model).
+- Shared library `ci/jenkins/` (`absa-ci`): `setupUv`, `awsLogin` (IRSA-aware), `publishStatus`, `postPrComment`.
+- **5 of 6 GHA workflows** ported as `ci/jenkins/examples/*.Jenkinsfile`:
+  `python-validate`, `code-intake`, `terraform-validate`, `pipeline-factory`,
+  `localstack-demo`. Only `publish-signing-key` is held — its trust policy
+  depends on the identity-model decision.
+- ADR-0003 + ADR-0009 cross-referenced; compliance matrix gained a Phase 3 (Proposed) section.
+
+**Gating action:** ABSA Cloud Platform confirms whether Jenkins runs on EKS (drives IRSA vs instance-profile choice). One 30-min call unblocks every Sprint M2 task.

@@ -66,6 +66,20 @@
 | **SOC 2 CC7.1 — system operations (validation evidence)** | Validation summary records each checker's pass/fail + finding codes + ran_at into the signed envelope; CAB can re-execute the same checkers against the same fixture and reproduce results | `code-intake/src/code_intake/manifest.py` (`_build_validation_summary`), `code-intake/tests/test_e2e_track_a.py` | EXL Platform Engineering |
 | **SOC 2 CC8.1 — change control framework** | Two deferred checks (SCH002 schema-version drift, SCH003 PIR referential integrity) marked `DEFERRED-CHECK:` in code with manifest-build-time enforcement per ADR-0010 | `code-intake/src/code_intake/manifest.py` (DEFERRED-CHECK markers), `code-intake/README.md` ("Deferred checks") | EXL Platform Engineering |
 
+## Phase 3 controls (CI platform migration — Jenkins, ADR-0011)
+
+> **Status:** Proposed. These rows describe the target state once
+> [ADR-0011](../adr/0011-ci-platform-jenkins.md) is `Accepted` and the
+> Sprint M3 cutover lands. Until then the ADR-0003 / ADR-0009 rows above
+> remain authoritative for the live CI gates.
+
+| Control | Implementation | Evidence artifact | Owner |
+| --- | --- | --- | --- |
+| **ISO 27001 A.9.4.1 — information access restriction (CI identity)** | Jenkins assumes the signer / registrar role via IRSA on EKS (recommended) — per-job ServiceAccount token; no static AWS credentials on agents | `terraform/modules/signing-foundation/` (`identity_provider = "jenkins_irsa"` variant), `ci/jenkins/vars/awsLogin.groovy` | EXL Platform Engineering |
+| **ISO 27001 A.12.1.4 — separation of environments (CI)** | Per-environment Jenkins agent labels (`linux-docker-prod`, `linux-docker-stg`) + per-environment IAM trust-policy `:sub` claims keyed on K8s namespace + ServiceAccount | `ci/jenkins/examples/pipeline-factory.Jenkinsfile`, `docs/adr/0011-ci-platform-jenkins.md` §"Jenkins identity model" | EXL Platform Engineering |
+| **SOC 2 CC8.1 — change control (branch protection)** | GitHub branch protection on `main` requires named Jenkins commit-status contexts (`ci/python-validate`, `ci/pipeline-factory/sign`, `ci/pipeline-factory/register`, `ci/localstack-demo`, `ci/code-intake`, `ci/terraform-validate`) before merge | GitHub repo settings → branches → main → required status checks; cross-referenced in `ci/jenkins/README.md` | EXL Platform Engineering |
+| **SR 11-7 III.5 — independent verification (drift-gate commit-back)** | Jenkins drift-gate uses a GitHub App identity (preferred) or scoped bot PAT for the regenerated-manifest commit; identity is auditable per-action and revocable without rotating a human account | `ci/jenkins/examples/pipeline-factory.Jenkinsfile` (validate stage), `docs/adr/0011-ci-platform-jenkins.md` §"Drift-gate commit-back" | EXL Platform Engineering |
+
 ## Out-of-matrix items (deferred)
 
 The following control rows belong to later phases and will be added to this matrix when the corresponding modules land:
