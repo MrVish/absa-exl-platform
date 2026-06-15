@@ -71,7 +71,7 @@ def overview():
     ):
         with Cluster("ABSA Trust Boundary (source account)", graph_attr=ABSA):
             devs = Users("Model developers")
-            src = S3("Source data +\nsigned code packages\n(object-lock, KMS)")
+            src = S3("Model-ready data +\nsigned code\n(raw PII stays in ABSA)")
             pir = General("PIR system\n(input register)")
             cab = General("CAB / IVU\ngovernance")
             absa_verify = IAMRole("ABSA verifier\nprincipal")
@@ -106,7 +106,7 @@ def overview():
 
         # Cross-boundary + key internal flows
         devs >> Edge(color=GRAY) >> src
-        src >> Edge(color=DATA, style="dashed", label="S3 replication (KMS)") >> scoredata
+        src >> Edge(color=DATA, style="dashed", label="model-ready data (no raw PII), KMS") >> scoredata
         intake >> Edge(color=GRAY) >> signer >> Edge(color=SEC, label="kms:Sign") >> signed
         signed >> Edge(color=GRAY) >> factory >> Edge(color=HTTP, label="SigV4 register") >> api
         compute >> Edge(color=DATA) >> scoredata
@@ -177,7 +177,7 @@ def track_b():
                 sm = Sagemaker("or SageMaker\nProcessing")
 
             with Cluster("Data + Quality", graph_attr=DATAC):
-                indata = S3("Scoring input\n(replicated)")
+                indata = S3("Scoring input\n(model-ready, replicated)")
                 dq = Lambda("DQ checks\n(volume, PSI drift)")
                 outdata = S3("Scoring outputs")
 
