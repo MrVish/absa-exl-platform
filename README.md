@@ -1,66 +1,127 @@
 # ABSA × EXL Model Hosting & Delivery Operations
 
 > **This is the single source of truth for the programme.** It explains what
-> we're building, what is already done, what remains, who does what, and how it
-> all sequences — and links every other document. New to the project? Read this
-> top to bottom, then follow the links that matter for your role.
+> we're building and *why*, how it works, what is already done, what remains,
+> who does what, how it sequences, and the language we use — and it links every
+> other document. New to the project? Read this top to bottom, then follow the
+> links that matter for your role. Returning? Jump via the [Contents](#contents).
 
 **Status (2026-06):** Platform **built and regression-tested end-to-end** on
-LocalStack (Phases 1–3, 278 tests green, 22 PRs merged). Next: a **12-sprint
-delivery programme** with an 8-person team to put it on real AWS, migrate CI to
-Jenkins, and onboard 10 ABSA models to production.
+LocalStack (Phases 1–3 — 278 tests green, 23 PRs merged, full producer→verifier
+chain runs on every PR). Next: a **12-sprint delivery programme** with an
+8-person team to put it on real AWS, migrate CI to Jenkins, and onboard 10 ABSA
+models to production.
 
 ---
 
 ## Contents
 
 1. [What we're building](#1-what-were-building)
+   - [1.1 The problem & context](#11-the-problem--context)
+   - [1.2 The two tracks](#12-the-two-tracks)
+   - [1.3 Model classes / pipeline tiers](#13-model-classes--pipeline-tiers)
+   - [1.4 The PII / trust-boundary principle](#14-the-pii--trust-boundary-principle)
 2. [Status at a glance](#2-status-at-a-glance)
 3. [Architecture](#3-architecture)
+   - [3.1 Diagrams](#31-diagrams)
+   - [3.2 Chain of custody](#32-chain-of-custody-the-core-guarantee)
+   - [3.3 Environments & account topology](#33-environments--account-topology)
+   - [3.4 Tech stack](#34-tech-stack)
 4. [Platform components](#4-platform-components)
-5. [What's done vs what's pending](#5-whats-done-vs-whats-pending)
-6. [Dependencies on ABSA](#6-dependencies-on-absa)
-7. [Delivery plan — 12 sprints](#7-delivery-plan--12-sprints)
-8. [Team & roles](#8-team--roles)
-9. [Open decisions](#9-open-decisions)
-10. [Compliance](#10-compliance)
-11. [Getting started](#11-getting-started)
-12. [Full documentation index](#12-full-documentation-index)
+5. [Platform invariants](#5-platform-invariants-the-rules-that-keep-it-trustworthy)
+6. [What's done vs what's pending](#6-whats-done-vs-whats-pending)
+7. [Dependencies on ABSA](#7-dependencies-on-absa)
+8. [Delivery plan — 12 sprints](#8-delivery-plan--12-sprints)
+9. [Team & roles](#9-team--roles)
+10. [Open decisions](#10-open-decisions)
+11. [Top risks](#11-top-risks)
+12. [Compliance](#12-compliance)
+13. [Getting started & conventions](#13-getting-started--conventions)
+14. [Glossary](#14-glossary)
+15. [Full documentation index](#15-full-documentation-index)
+16. [Repository layout](#16-repository-layout)
 
 ---
 
 ## 1. What we're building
 
-EXL is delivering a **production-grade, audit-ready ML hosting platform** for
-ABSA Group's model-industrialisation programme. It productionises
-developer-authored **SAS / Python** models, scores them on a schedule, and
-reconciles every run against the developer's reference evidence — **without raw
-PII ever leaving the ABSA trust boundary.**
+### 1.1 The problem & context
 
-Initial cohort: **10 models.** The platform is built to make onboarding the
-11th, 20th, 50th model a repeatable, template-driven exercise rather than a
-bespoke project each time.
+ABSA Group develops risk and decision models (credit PD, scorecards, etc.) in
+SAS and Python. Today those models live in developer environments; getting them
+into **governed, auditable, scheduled production scoring** is slow, manual, and
+hard to evidence for regulators. ABSA's model-industrialisation programme exists
+to fix that, and ABSA has engaged **EXL** to build and operate the hosting
+platform.
 
-### The two tracks
+EXL delivers a **production-grade, audit-ready ML hosting platform** that:
 
-| Track | What it does | Cadence |
+- takes a developer-authored model and **industrialises** it (standardises,
+  optimises, packages, signs);
+- **scores it on a schedule** on EXL-operated AWS infrastructure;
+- **reconciles every run** against the developer's reference outputs;
+- returns auditable results to ABSA — **without raw PII ever leaving ABSA's
+  trust boundary** (see [1.4](#14-the-pii--trust-boundary-principle)).
+
+Initial cohort: **10 models.** The platform is deliberately built so onboarding
+the 11th / 20th / 50th model is **template-driven configuration, not a bespoke
+project** each time.
+
+### 1.2 The two tracks
+
+The platform supports two distinct, registry-linked flows.
+
+**Track A — Model Onboarding & Pipeline Factory** *(one-time per model)*
+
+1. ABSA shares an approved model: dev code, supporting artefacts, input-variable
+   spec, and **benchmark (reference) outputs**.
+2. EXL's industrialisation team standardises and optimises the scoring code and
+   assembles a **productized package** (`packages/<name>/<version>/`: SAS code,
+   Python `score.py` + tests, `pir.yaml`, `model_config.yaml`).
+3. **Code Intake** validates the package with five checkers and produces an
+   **unsigned package manifest** (a digest over every artefact byte).
+4. **Manifest Signer** signs the manifest with a KMS asymmetric key; the signed
+   envelope lands in S3.
+5. **Pipeline Factory** generates a scoring pipeline (Step Functions ASL +
+   Terraform) for the model's class, cross-linking the upstream package by
+   **digest**.
+6. The pipeline is **registered** (SigV4-authenticated) into the registry, which
+   gates promotion behind an approval state machine and writes an audit record.
+
+**Track B — Scheduled Scoring & Delivery** *(recurring)*
+
+1. ABSA's scheduler triggers a data hand-off; scoring inputs replicate
+   cross-account into EXL via **encrypted S3 replication**.
+2. **EventBridge** fires the model's schedule → **Step Functions** runs the
+   generated pipeline.
+3. The **scoring compute** (Lambda container / SageMaker Processing) executes the
+   signed, registered model code over the input data.
+4. **Data-quality checks** (volume bands, PSI drift) and **reconciliation**
+   against ABSA's benchmark run; deltas are reported within agreed tolerances.
+5. Outputs are **signed** and delivered cross-account back to ABSA, who **verifies
+   offline** with the published public key.
+6. Every run emits an **audit trail**; CloudWatch + SNS handle monitoring and
+   alerting.
+
+### 1.3 Model classes / pipeline tiers
+
+Pipeline Factory renders a pipeline from a **template chosen by the model's
+class**, so each tier's controls are built once and reused:
+
+| Tier | For | Status |
 |---|---|---|
-| **A — Model Onboarding & Pipeline Factory** | A developer model is industrialised, packaged with a **signed manifest**, validated by Code Intake, and registered. A scoring pipeline is generated from a template based on the model's class. | One-time per model |
-| **B — Scheduled Scoring & Delivery** | ABSA hands off data via cross-account S3 replication. EXL validates, scores, runs data-quality + reconciliation checks, signs the output, and delivers results back to ABSA. | Recurring (per-model schedule) |
+| **standard-batch** | Most batch-scored models (Lambda + Step Functions) | ✅ Implemented template |
+| **scalable-batch** | High-volume batch (distributed / larger compute) | ✅ Implemented template |
+| **realtime** | Synchronous / low-latency scoring | ⏳ Placeholder — SLA decision (D05) drives the build |
 
-### The non-negotiables (why the platform is shaped the way it is)
+### 1.4 The PII / trust-boundary principle
 
-- **Auditable** — every artifact is cryptographically signed; every state
-  change is logged; a full chain-of-custody runs from intake to delivery.
-- **Repeatable** — pipeline templates + a model registry turn onboarding into
-  configuration, not construction.
-- **Cross-account** — ABSA and EXL operate in separate AWS accounts with
-  cryptographically verifiable hand-offs; PII stays in ABSA's boundary.
-- **Banking-grade** — POPIA / SARB / SR 11-7 / model-risk governance are
-  designed in, not bolted on.
-
-Full narrative for a techno-functional audience: **[docs/program-flow.md](docs/program-flow.md)**.
-Original engagement brief: **[CLAUDE_CODE_BRIEF.md](CLAUDE_CODE_BRIEF.md)**.
+The hard constraint that shapes the whole architecture: **raw PII never leaves
+ABSA's trust boundary.** EXL operates the scoring runtime, but the cross-account
+hand-offs are **cryptographically verifiable** (signed manifests, public-key
+verification) and the data plane is **KMS-encrypted with object-lock**. ABSA can
+independently verify every artefact EXL produces using only the published public
+key — they never have to trust EXL's word, only the maths.
 
 ---
 
@@ -74,21 +135,21 @@ Original engagement brief: **[CLAUDE_CODE_BRIEF.md](CLAUDE_CODE_BRIEF.md)**.
 | Scoring runtime (Step Functions execution) | ⏳ **Templates render; runtime not built** | `scoring-engine/` is a placeholder |
 | PIR reconciliation engine | ⏳ **Not built** | `pir-engine/` is a placeholder (Phase 4) |
 | CI on Jenkins (ADR-0011) | 🟡 **Scaffold done (M1)** | Shared library + 5 example Jenkinsfiles; cutover (M2/M3) pending |
-| Real-AWS deployment | ⏳ **Pending** | Blocked on ABSA inputs — see §6 |
-| 10-model onboarding | ⏳ **Pending** | The substance of the 12-sprint plan — see §7 |
+| Real-AWS deployment | ⏳ **Pending** | Blocked on ABSA inputs — see §7 |
+| 10-model onboarding | ⏳ **Pending** | The substance of the 12-sprint plan — see §8 |
 
 **The one sentence:** the platform is built and proven on LocalStack; the work
 ahead is putting it on real AWS, swapping CI to Jenkins, and onboarding 10
-models — all captured in the delivery plan (§7), most of it gated on ABSA
-inputs (§6).
-
-Detailed build closeout: **[docs/phase-3-closeout.md](docs/phase-3-closeout.md)**.
+models — all captured in the delivery plan (§8), most of it gated on ABSA inputs
+(§7). Detailed build closeout: **[docs/phase-3-closeout.md](docs/phase-3-closeout.md)**.
 
 ---
 
 ## 3. Architecture
 
-Five rendered, regenerate-from-code diagrams live in
+### 3.1 Diagrams
+
+Five rendered, regenerate-from-code diagrams in
 **[docs/architecture/](docs/architecture/README.md)**:
 
 | Diagram | Shows |
@@ -99,54 +160,122 @@ Five rendered, regenerate-from-code diagrams live in
 | [Chain of custody](docs/architecture/04-chain-of-custody.png) | KMS asymmetric signing + cross-account verification |
 | [CI/CD — Jenkins](docs/architecture/05-cicd-jenkins.png) | The ADR-0011 migration |
 
-- **Written architecture:** [docs/architecture.md](docs/architecture.md)
-- **End-to-end technical walkthrough:** [docs/technical-overview.md](docs/technical-overview.md)
-- **Decisions (11 ADRs):** [docs/adr/](docs/adr/) — see the index in §12.
+Written architecture: [docs/architecture.md](docs/architecture.md) ·
+End-to-end technical walkthrough: [docs/technical-overview.md](docs/technical-overview.md) ·
+Decisions (11 ADRs): [docs/adr/](docs/adr/) (index in §15).
 
-**The chain-of-custody anchor** (the platform's signature guarantee): a package
-manifest's `digest` equals the pipeline manifest's `upstream_refs[0].digest`
-equals `sha256(canonical_json(payload))` — and it holds across signing, the S3
-round-trip, and a cross-account read. KMS asymmetric CMK (RSA-3072,
-`RSASSA_PKCS1_V1_5_SHA_256`); ABSA verifies offline with only the published PEM.
+### 3.2 Chain of custody (the core guarantee)
+
+The platform's signature property — what makes EXL's outputs trustworthy to
+ABSA and auditors:
+
+- Every manifest is a **canonical-JSON envelope** (`payload` + `signature` +
+  `signing_key_arn` + `subject_type`). Canonical JSON makes the byte
+  representation **deterministic**, so a signature is reproducible.
+- Signing uses a **KMS asymmetric CMK** — RSA-3072, key usage `SIGN_VERIFY`,
+  algorithm `RSASSA_PKCS1_V1_5_SHA_256`. The private key never leaves KMS; the
+  public key is published (PEM) to a cross-account-readable S3 bucket.
+- **The digest anchor:** a package manifest's `digest` equals the pipeline
+  manifest's `upstream_refs[0].digest` equals `sha256(canonical_json(payload))`.
+  This chains package → pipeline → registry record, and **holds across signing,
+  the S3 round-trip, and a cross-account read** by a different AWS session. The
+  canonical demo proves it end-to-end (chain digest
+  `7905ac3a…c8870b`).
+- ABSA **verifies offline** with only the published PEM — no live call to EXL's
+  KMS required.
+
+This is specified in [ADR-0003](docs/adr/0003-manifest-signing-kms-asymmetric.md)
+and [ADR-0009](docs/adr/0009-signing-foundation-topology.md).
+
+### 3.3 Environments & account topology
+
+Per [ADR-0004](docs/adr/0004-account-topology-1-absa-3-exl.md): **1 ABSA account
++ 3 EXL accounts** (`exl-dev`, `exl-stg`, `exl-prod`). The signing CMK and
+production scoring live in `exl-prod`; lower environments mirror the topology for
+safe iteration.
+
+The **LocalStack demo simulates the cross-account boundary** with header-based
+account IDs — producer under `111111111111` (`exl-prod-sim`), verifier under
+`222222222222` (`absa-sim`) — exercising the real IAM policy evaluation without
+real accounts. When real accounts land, the demo's structure becomes the
+production flow: same CLIs, same code paths, same chain-of-custody assertions;
+only the endpoints and the boto3 session shape change.
+
+### 3.4 Tech stack
+
+| Layer | Technology |
+|---|---|
+| Language / tooling | Python 3.12, **uv** workspace (monorepo), ruff, mypy --strict, pytest |
+| Contracts | JSON Schema (Draft 2020-12), **canonical JSON**, datamodel-code-generator → Pydantic v2 |
+| Services (apps/CLIs) | FastAPI (registry), **Click** CLIs (code-intake, pipeline-factory, manifest-signer) |
+| AWS | IAM (cross-account), **KMS** (asymmetric CMK), S3 (replication, object-lock), DynamoDB, Lambda, API Gateway, **Step Functions** (ASL), EventBridge, CloudTrail, GuardDuty, Security Hub |
+| IaC | Terraform 1.9.5 (modules + per-env stacks), tflint / tfsec / checkov |
+| Local / test | **LocalStack** CE 3.8.1, moto, Docker / docker-compose |
+| CI/CD | GitHub Actions (today) → **Jenkins** shared library / Groovy (ADR-0011, in migration) |
+| Compute (Track B) | Lambda container and/or SageMaker Processing (**D04** decides) |
 
 ---
 
 ## 4. Platform components
 
-Python **uv workspace** (monorepo). Each member is independently testable.
+Python **uv workspace** (monorepo). Each member is independently testable; the
+full suite runs on every PR.
 
-| Component | Purpose | Status |
-|---|---|---|
-| [`platform-contracts/`](platform-contracts/) | JSON-Schema contracts (Draft 2020-12) + generated Pydantic models + drift guard + `canonical_json` | ✅ Built |
-| [`code-intake/`](code-intake/README.md) | Validates a productized package — 5 checkers (static_python, static_sas, schema, tests, pir) in per-package venvs; builds the signed package manifest | ✅ Built (real SAS lint deferred) |
-| [`pipeline-factory/`](pipeline-factory/) | Generates the scoring pipeline (ASL + Terraform) from a model config; registers it (SigV4). Standard-batch + scalable-batch templates; realtime is a placeholder | ✅ Built |
-| [`manifest-signer/`](manifest-signer/) | KMS asymmetric signing + verify (online / offline / from-bucket) + public-key publish | ✅ Built |
-| [`registry/api/`](registry/) | Model & Pipeline Registry — FastAPI + DynamoDB, approval state machine, append-only audit log | ✅ Built (Lambda packaging pending) |
-| [`packages/`](packages/) | Worked-example productized package (`credit-risk-pd@1.0.0`) | ✅ Example |
-| [`pipelines/`](pipelines/) | Generated per-version pipeline artifacts | ✅ Example |
-| [`scoring-engine/`](scoring-engine/README.md) | Step Functions / Spark scorers (runtime execution) | ⏳ Placeholder |
-| [`pir-engine/`](pir-engine/README.md) | Post-implementation-review reconciliation | ⏳ Placeholder (Phase 4) |
-| [`terraform/`](terraform/) | All IaC — landing-zone, s3-replication, kms-hierarchy, iam-federation, pipeline-registry, signing-foundation modules + per-env stacks | ✅ Written/validated; apply pending |
-| [`infra/localstack/`](infra/localstack/) | LocalStack compose + terraform for the end-to-end demo | ✅ Built |
-| [`ci/jenkins/`](ci/jenkins/README.md) | Jenkins shared library (`absa-ci`) + 5 example Jenkinsfiles (ADR-0011) | 🟡 Scaffold (M1) |
-| [`scripts/demo/`](scripts/) | `make demo` orchestrator — producer + verifier chain | ✅ Built |
-| [`scripts/`](scripts/) | Programme tooling: agile-plan / kickoff-brief / architecture-diagram generators + feasibility audit | ✅ Built |
+| Component | Purpose | Key surface | Status |
+|---|---|---|---|
+| [`platform-contracts/`](platform-contracts/) | The contract backbone — JSON-Schema definitions, generated Pydantic models (with a drift guard so code can't diverge from schema), and the shared `canonical_json` | `schemas/*.schema.json`, `models.py`, `canonical.py` | ✅ Built |
+| [`code-intake/`](code-intake/README.md) | Validates a productized package and produces the signed package manifest | 5 checkers (`static_python`, `static_sas`, `schema`, `tests`, `pir`) in per-package venvs; CLI `validate` / `generate-manifest`; finding codes PY/SAS/SCH/TST/PIR | ✅ Built (real SAS lint deferred — needs ABSA runtime) |
+| [`pipeline-factory/`](pipeline-factory/) | Generates the scoring pipeline from a model config and registers it | CLI `generate` / `register` (SigV4); standard-batch + scalable-batch ASL templates; realtime placeholder; per-pipeline Terraform stub | ✅ Built |
+| [`manifest-signer/`](manifest-signer/) | KMS asymmetric signing + verification | CLI `sign` / `sign-all` / `verify-online` / `verify-offline` / `verify-from-bucket` / `publish-key`; idempotent S3 upload | ✅ Built |
+| [`registry/api/`](registry/) | Model & Pipeline Registry | FastAPI + DynamoDB; approval state machine (CAB/IVU evidence gates promotion); append-only audit log; `/healthz` `/readyz` | ✅ Built (Lambda packaging pending) |
+| [`packages/`](packages/) | Worked-example productized package | `credit-risk-pd@1.0.0` | ✅ Example |
+| [`pipelines/`](pipelines/) | Generated per-version pipeline artifacts | `credit-risk-pd/1.0.0/` (manifest, registration, terraform) | ✅ Example |
+| [`scoring-engine/`](scoring-engine/README.md) | Step Functions / Spark scorers (runtime execution) | — | ⏳ Placeholder (Bucket A) |
+| [`pir-engine/`](pir-engine/README.md) | Post-implementation-review reconciliation | — | ⏳ Placeholder (Phase 4) |
+| [`terraform/`](terraform/) | All IaC | modules: landing-zone, s3-replication-{source,destination}, kms-hierarchy, iam-federation, pipeline-registry, signing-foundation; per-env stacks; account-bootstrap | ✅ Written/validated; apply pending |
+| [`infra/localstack/`](infra/localstack/) | LocalStack compose + terraform for the demo | `docker-compose.yml`, `terraform/` | ✅ Built |
+| [`ci/jenkins/`](ci/jenkins/README.md) | Jenkins shared library (`absa-ci`) + 5 example Jenkinsfiles | `vars/` steps (setupUv, awsLogin, publishStatus, postPrComment); `examples/*.Jenkinsfile` | 🟡 Scaffold (M1) |
+| [`scripts/demo/`](scripts/) | `make demo` orchestrator | 7-step producer chain + 7-step verifier chain against LocalStack | ✅ Built |
+| [`scripts/`](scripts/) | Programme tooling | agile-plan / kickoff-brief / architecture-diagram generators + `audit_agile_plan.py` | ✅ Built |
 
 ---
 
-## 5. What's done vs what's pending
+## 5. Platform invariants (the rules that keep it trustworthy)
 
-The **build phase is essentially closed.** What remains splits into three
-buckets:
+These are the properties that must never silently break — CI enforces most of
+them. If you're changing the platform, protect these:
+
+1. **Byte-stable manifests.** `code-intake generate-manifest` and
+   `pipeline-factory generate` are deterministic; CI re-renders every fixture
+   and fails on any diff (`git diff --exit-code`). A "drift gate."
+2. **Schema ↔ model parity.** Generated Pydantic models must match the JSON
+   schemas; the drift guard regenerates and fails on diff.
+3. **The chain-of-custody digest anchor** (§3.2) must hold end-to-end — the
+   LocalStack demo asserts it on every PR.
+4. **No hand-edited manifests.** `manifest.json` is generated; signed copies
+   live in S3, unsigned copies in git. Edit the source + regenerate.
+5. **Signatures are reproducible.** Canonical JSON + a fixed KMS algorithm mean
+   the same payload always produces a verifiable signature.
+6. **CI green before merge.** Branch protection + CODEOWNERS; the
+   `localstack-demo` gate distinguishes platform regressions (block) from infra
+   flakes (warn) via exit codes 0/1/2/3.
+7. **Generated docs regenerate from code.** The agile plan, role briefs,
+   architecture diagrams, and skills matrix are emitted by `scripts/` — edit the
+   generator, not the output.
+
+---
+
+## 6. What's done vs what's pending
+
+The **build phase is essentially closed.** What remains splits into three buckets:
 
 ### Bucket A — buildable now (the demo→production gap, ~7–11 engineer-weeks)
-No ABSA input required; this is the code between "works on LocalStack" and
-"deployable to real AWS":
+No ABSA input required; the code between "works on LocalStack" and "deployable to real AWS":
 
 | Item | Effort |
 |---|---|
 | Lambda packaging for `registry-api` | ~5–7 d |
-| Step Functions ASL **runtime** execution | ~5–8 d |
+| Step Functions ASL **runtime** execution (`scoring-engine`) | ~5–8 d |
 | Real cross-account IAM via `sts:AssumeRole` | ~4–5 d |
 | Stricter PIR extraction (dict aliases, `.get()`, cross-function) | ~5–7 d |
 | Multi-package chaining scenarios | ~3–5 d |
@@ -157,70 +286,75 @@ No ABSA input required; this is the code between "works on LocalStack" and
 
 ### Bucket B — blocked on ABSA (can't complete until inputs land)
 Real account onboarding · real SAS validation (SAS runtime) · PIR system
-integration · CAB/IVU integration · first real Track A scoring run · cross-account
-verifier against real AWS. See §6.
+integration · CAB/IVU integration · first real Track A scoring run ·
+cross-account verifier against real AWS. See §7.
 
 ### Bucket C — Jenkins migration (ADR-0011, ~10–15 DevOps-days)
-M1 scaffold **done**; M2 (AWS-touching ports + `identity_provider` Terraform)
-and M3 (cutover, GHA retirement) pending; partly gated on the AWS identity
-decision.
+M1 scaffold **done**; M2 (AWS-touching ports + `identity_provider` Terraform) and
+M3 (cutover, GHA retirement) pending; partly gated on the AWS identity decision.
 
 > **Key framing:** Buckets A, B and C are not separate from the delivery plan —
-> they *are* its early epics (§7). The genuinely *new, unplanned* code is small:
+> they *are* its early epics (§8). The genuinely *new, unplanned* code is small:
 > the realtime template and SCH002/003 (~5 days total).
 
 ---
 
-## 6. Dependencies on ABSA
+## 7. Dependencies on ABSA
 
-Every top programme risk is an ABSA dependency. These are tracked live in the
-**RAID Log** sheet of [docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx);
-the Tech Lead sends the consolidated ask-list in Sprint 1 and chases weekly.
+Every top programme risk is an ABSA dependency. Tracked live in the **RAID Log**
+sheet of [docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx); the Tech
+Lead sends the consolidated ask-list in Sprint 1 and chases weekly.
 
-| # | Dependency | First needed |
-|---|---|---|
-| 1 | AWS account IDs (3 EXL + ABSA receiving) | Sprint 2 |
-| 2 | IAM principal ARNs (`kms:Verify` / `s3:GetObject`) | Sprint 4 |
-| 3 | SAS runtime Docker image + license | Sprint 2–3 |
-| 4 | PIR system API / feed contract | Sprint 5 |
-| 5 | Data-movement decision (S3 replication vs SFTP) | Sprint 4 |
-| 6 | CAB / IVU API contract | Sprint 5 |
-| 7 | Network connectivity choice (peering / TGW / PrivateLink) | Sprint 3 |
-| 8 | Approved model docs + code + benchmarks (models 1–2 first) | Sprint 2 |
+| # | Dependency | First needed | If late |
+|---|---|---|---|
+| 1 | AWS account IDs (3 EXL + ABSA receiving) | Sprint 2 | Bootstrap blocked; everything downstream slips day-for-day |
+| 2 | IAM principal ARNs (`kms:Verify` / `s3:GetObject`) | Sprint 4 | Cross-account verify untestable |
+| 3 | SAS runtime Docker image + license | Sprint 2–3 | SAS validation stays structural-only |
+| 4 | PIR system API / feed contract | Sprint 5 | `pir.yaml` stays hand-maintained |
+| 5 | Data-movement decision (S3 replication vs SFTP) | Sprint 4 | Transfer + delivery automation blocked |
+| 6 | CAB / IVU API contract | Sprint 5 | Change workflow stays manual |
+| 7 | Network connectivity (peering / TGW / PrivateLink) | Sprint 3 | Data plane to ABSA blocked |
+| 8 | Approved model docs + code + benchmarks (models 1–2) | Sprint 2 | SAS + DE model work blocked |
 
 **Sprint 1 is fully unblocked** by design — the team is productive from day one
 regardless of ABSA's timing.
 
 ---
 
-## 7. Delivery plan — 12 sprints
+## 8. Delivery plan — 12 sprints
 
 Two-week sprints, **start Mon 2026-06-15**, ~6 months. Full backlog (13 epics /
-52 stories / ~248 tasks, capacity-validated) in
-**[docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx)**; a
-client-facing walkthrough in
+52 stories / ~248 tasks, capacity-validated, feasibility-audited) in
+**[docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx)**; client-facing
+walkthrough in
 [docs/absa-exl-program-walkthrough.pptx](docs/absa-exl-program-walkthrough.pptx).
 
-| Milestone | Sprint | Target |
-|---|---|---|
-| Jenkins cutover complete (GHA retired) | S3 | ~Jul 24 |
-| Registry live on Lambda (dev) | S4 | ~Aug 7 |
-| Dress rehearsal — full chain on real AWS, models 1–2 | S6 | ~Sep 4 |
-| ⭐ **GROUP 1 ABSA SIGN-OFF** (the programme gate) | S8 | ~Oct 2 |
-| All 10 models live (Group 2 onboarding complete) | S11 | ~Nov 13 |
-| Group 2 sign-off + handover + steady-state go-live | S12 | ~Nov 27 |
+| Sprint | Dates (approx) | Focus | Milestone |
+|---|---|---|---|
+| S1 | Jun 15–26 | Onboarding; Jenkins identity decided; ABSA ask-list sent | |
+| S2 | Jun 29–Jul 10 | No-AWS Jenkins jobs; AWS bootstrap; data contracts; model-1 review | |
+| S3 | Jul 13–24 | Jenkins cutover; signing foundation on real AWS; model-1 optimized | **GHA retired** |
+| S4 | Jul 27–Aug 7 | Registry on Lambda (dev); replication validated; threat model | **Registry live (dev)** |
+| S5 | Aug 10–21 | SFN executes model-1; PIR sync; model-2 optimized; **capacity review** | |
+| S6 | Aug 24–Sep 4 | **Dress rehearsal** (full chain, real AWS, models 1–2); dashboards | **Dress rehearsal** |
+| S7 | Sep 7–18 | Group 1 production scoring; reconciliation; perf + resilience; UAT plan | |
+| S8 | Sep 21–Oct 2 | Pen-test remediation; 3rd SAS onboarded; G2 plan | ⭐ **GROUP 1 SIGN-OFF** |
+| S9 | Oct 5–16 | Group 2 wave 1 (models 3–5); dashboards validated; cost dashboard | |
+| S10 | Oct 19–30 | Group 2 wave 2 (models 6–8); output delivery automated | |
+| S11 | Nov 2–13 | Group 2 wave 3 (models 9–10); runbooks; DR verified | **All 10 live** |
+| S12 | Nov 16–27 | Hardening only; handover; hypercare | ⭐ **GROUP 2 SIGN-OFF + go-live** |
 
-The plan is **audited for feasibility** (dependency ordering, capacity,
-unblocked S1, model coverage) by `scripts/audit_agile_plan.py` — it passes.
-Group 2's 8 models are compressed into S9–S11 so S12 is hardening + sign-off,
-not a race to finish.
+Group 2's 8 models are compressed into S9–S11 so S12 is hardening + sign-off, not
+a race. The plan is **feasibility-audited** (`scripts/audit_agile_plan.py`):
+dependency ordering clean, no capacity overloads, S1 unblocked, all 10 models
+covered.
 
 ---
 
-## 8. Team & roles
+## 9. Team & roles
 
 **8 people.** Per-role kickoff briefs (mission, Sprint 1 tasks, full-program
-load, ABSA blockers, reading list) are in
+load, ABSA blockers, reading list) in
 **[docs/onboarding/](docs/onboarding/README.md)**, generated from the backlog so
 they never drift.
 
@@ -232,36 +366,59 @@ they never drift.
 | DevOps | DevOps Engineer | [devops](docs/onboarding/role-brief-devops.md) |
 | TL | Tech Lead (Vishnu) | [tech-lead](docs/onboarding/role-brief-tech-lead.md) |
 
-**Onboarding a new joiner?** The per-role skillsets (Core / Ramp-up / Bonus)
-needed to contribute are in
+**Onboarding a new joiner?** Per-role skillsets (Core / Ramp-up / Bonus) in
 **[docs/onboarding/skills-matrix.md](docs/onboarding/skills-matrix.md)**.
 
 ---
 
-## 9. Open decisions
+## 10. Open decisions
 
-Tracked as D01–D09 (RAID Log + the program-plan workbook). The ones that gate
-build work:
+Tracked as D01–D09 (RAID Log + the program-plan workbook). Status as of 2026-06:
+all **Open**.
 
-- **D04 — ML compute platform:** Step Functions + Lambda vs SageMaker
-  Pipelines/Processing (gates the Track B build).
-- **D01 — Data-drift framework:** which metrics (PSI / KL), window, alerting.
-- **D02 — Change-management workflow:** CAB/IVU vs the registry approval state machine.
-- **D08 / D09 — Dashboard tool + output-delivery format.**
-- Plus the **Jenkins identity model** (IRSA-on-EKS / instance profile / OIDC) —
-  see [ADR-0011](docs/adr/0011-ci-platform-jenkins.md).
+| ID | Decision | Owner(s) | Gates |
+|---|---|---|---|
+| D01 | Data-drift framework — metrics (PSI/KL), window, manual vs automated | ABSA Risk + EXL ML | DQ/drift dashboards (S8); steady-state anomaly review |
+| D02 | Change-management workflow — registry approval vs separate CAB/IVU flow | Compliance + ABSA Risk | First production change (Group 1) |
+| D03 | Access / secret rotation cadence (IAM, tokens, dashboard access) | Compliance | Audit posture before steady state |
+| **D04** | **ML compute platform — Step Functions + Lambda vs SageMaker** | Tech Lead + Arch Board | **Track B build (S5)** |
+| D05 | Real-time tier SLA + implementation (Lambda+APIGW / Fargate / SM endpoint) | Tech Lead + ABSA Architect | Realtime template (placeholder today) |
+| D06 | Data-movement — S3 cross-account replication vs SFTP | ABSA Architect + EXL Cloud | Secure transfer build (S4) |
+| D07 | Single-region (eu-west-1) vs multi-region | ABSA Architect | KMS replica + signing-foundation scope |
+| D08 | Dashboard hosting — Grafana / CloudWatch / QuickSight | Program Mgr + ABSA Risk | Dashboard build (S8b) |
+| D09 | Output-delivery format — signed S3 / SFTP push / API pull | ABSA Architect + EXL Cloud | Delivery runbook + automation |
+| (ADR-0011) | Jenkins identity model — IRSA-on-EKS / instance profile / OIDC | DevOps + ABSA Cloud | Signing-foundation trust policy (M2) |
 
 ---
 
-## 10. Compliance
+## 11. Top risks
+
+From the RAID Log (probability / impact). Full register in the agile-plan
+workbook.
+
+| ID | Risk | P/I | Mitigation |
+|---|---|---|---|
+| RISK-01 | ABSA account onboarding delayed past S2 | High / Med | 2 AWS engineers + ~2 d/sprint S2–S5 slack; pre-stage TF; LocalStack keeps CI green; escalate end S1 |
+| RISK-02 | Group 1 sign-off (S8) slips → cascades to Group 2 | Med / High | Models 1–2 run in **parallel** (2 SAS) from S2; dress rehearsal S6; defect buffer S7–S8 |
+| RISK-03 | D04 compute choice blocks the S5 build | Med / Med | Decision required end S3 at architecture board; AWS2 owns it |
+| RISK-04 | Benchmark reconciliation forces scoring-code rewrite | Med / High | Incremental validation; per-variable deltas; tolerance bands agreed early; S11 float + S12 hardening absorb rework |
+| RISK-07 | DevOps is the only un-doubled role (S2 / S6 peaks) | Med / Med | TL pairs at peaks; watch S2 (Jenkins crunch) + S6 |
+
+---
+
+## 12. Compliance
 
 POPIA · SARB GOI 3/5 · SR 11-7 · ISO 27001 · SOC 2 Type II · ABSA GMRMG.
 Control matrix (per-phase, with evidence pointers):
 **[docs/compliance/control-matrix.md](docs/compliance/control-matrix.md)**.
 
+The chain-of-custody design (§3.2), the append-only audit log, object-lock
+retention, and the per-account security baseline (CloudTrail / GuardDuty /
+Security Hub / CIS alarms) are the primary evidence-producing controls.
+
 ---
 
-## 11. Getting started
+## 13. Getting started & conventions
 
 ```bash
 # Prereqs: Python 3.12, uv, Docker, Terraform 1.9.5
@@ -276,9 +433,57 @@ trace one model through `packages/credit-risk-pd/1.0.0/` → `code-intake valida
 touches ~80% of the concepts. Demo runbook:
 [docs/runbooks/localstack-demo.md](docs/runbooks/localstack-demo.md).
 
+**Conventions**
+- **Branch-based flow** — no direct pushes to `main`; every change is a PR; CI
+  green before merge; CODEOWNERS review.
+- **Definition of Done** — merged, tests green, docs updated if behaviour
+  changed, acceptance criteria met, demoed on the sprint review.
+- **Regenerating generated docs** — edit the generator in `scripts/`, not the
+  output: `build_agile_plan.py` (the Excel), `build_kickoff_briefs.py` (role
+  briefs), `build_aws_diagrams.py` (architecture PNGs), `audit_agile_plan.py`
+  (feasibility check). Keep the schema-generated `models.py` in sync via
+  `platform-contracts/regenerate-models.sh`.
+- **This README first** — when the plan or platform changes, update this file
+  before anything else; it's the spine.
+
 ---
 
-## 12. Full documentation index
+## 14. Glossary
+
+| Term | Meaning |
+|---|---|
+| **ABSA** | The client bank; owns the models, the data, and the trust boundary |
+| **EXL** | The delivery partner; builds + operates the hosting platform |
+| **Track A** | One-time model onboarding → packaged, signed, registered (§1.2) |
+| **Track B** | Recurring scheduled scoring + delivery (§1.2) |
+| **Productized package** | A git-tracked `packages/<name>/<version>/` bundle: SAS + Python code, tests, `pir.yaml`, `model_config.yaml`, manifest |
+| **`model_config.yaml`** | The package contract — declares model class, inputs, schedule, etc. |
+| **Manifest** | A signed JSON envelope describing an artefact. *Package* manifest (Code Intake) and *pipeline* manifest (Pipeline Factory) |
+| **Manifest envelope** | `payload` + `signature` + `signing_key_arn` + `subject_type` |
+| **Canonical JSON** | Deterministic byte serialisation so signatures are reproducible |
+| **Chain of custody / digest anchor** | package.digest == pipeline.upstream_ref == sha256(canonical_json(payload)) (§3.2) |
+| **Code Intake** | Validator that produces the signed package manifest (5 checkers) |
+| **Pipeline Factory** | Generates the scoring pipeline (ASL + Terraform) from a model config |
+| **Manifest Signer** | KMS asymmetric sign / verify / publish |
+| **Registry** | Model & pipeline registry — approval gate + audit log |
+| **PIR** | Production Input Register — the authority on a model's input variables; used for reconciliation evidence |
+| **CAB / IVU** | Change Advisory Board / Independent Validation Unit — ABSA governance bodies that gate production changes |
+| **ASL** | Amazon States Language — the Step Functions definition language |
+| **CMK** | Customer Master Key (AWS KMS); here an asymmetric RSA-3072 SIGN_VERIFY key |
+| **SigV4** | AWS Signature Version 4 — used to authenticate registry calls |
+| **IRSA** | IAM Roles for Service Accounts (EKS) — a Jenkins↔AWS auth option (ADR-0011) |
+| **Drift gate** | CI check that re-renders artefacts and fails on any diff (byte-stability) |
+| **LocalStack / moto** | Local AWS emulation for the demo / unit tests |
+| **uv** | The Python package/workspace manager used across the monorepo |
+| **ADR** | Architecture Decision Record (`docs/adr/`) |
+| **RAID** | Risks, Assumptions, Issues, Dependencies (a sheet in the agile plan) |
+| **MoSCoW** | Must / Should / Could / Won't prioritisation (on backlog stories) |
+| **DoR / DoD** | Definition of Ready / Definition of Done |
+| **SR 11-7 / POPIA / SARB GOI / GMRMG** | US model-risk guidance / SA data-protection law / SA Reserve Bank governance / ABSA Group Model Risk Mgmt Guideline |
+
+---
+
+## 15. Full documentation index
 
 ### Start here
 - **This README** — single source of truth
@@ -303,7 +508,7 @@ touches ~80% of the concepts. Demo runbook:
   [0011 CI → Jenkins](docs/adr/0011-ci-platform-jenkins.md)
 
 ### Delivery & planning
-- [docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx) — the backlog + Sprint Plan + Role Load + RAID + Per-Model Tracker
+- [docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx) — backlog + Sprint Plan + Role Load + RAID + Per-Model Tracker
 - [docs/absa-exl-program-plan.xlsx](docs/absa-exl-program-plan.xlsx) — phase-level program plan
 - [docs/absa-exl-program-walkthrough.pptx](docs/absa-exl-program-walkthrough.pptx) — client walkthrough deck
 - [docs/onboarding/](docs/onboarding/README.md) — role briefs + [skills matrix](docs/onboarding/skills-matrix.md)
@@ -323,7 +528,7 @@ touches ~80% of the concepts. Demo runbook:
 
 ---
 
-## Repository layout
+## 16. Repository layout
 
 ```
 docs/             Architecture, ADRs, runbooks, compliance, delivery plans, onboarding
