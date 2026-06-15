@@ -33,6 +33,12 @@ infra/localstack/.uvicorn.log
 *.key
 secrets/
 
+# Node.js (scripts/ deck builder — pptxgenjs et al.)
+node_modules/
+
+# Demo orchestrator transcript output (written by `make demo` / localstack-demo)
+demo-transcript.md
+
 # Python
 .venv/
 __pycache__/
