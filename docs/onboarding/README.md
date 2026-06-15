@@ -10,6 +10,8 @@
 | [DevOps Engineering](role-brief-devops.md) | DevOps | 5.5 d |
 | [Tech Lead (Vishnu)](role-brief-tech-lead.md) | TL | 4.5 d |
 
+**Onboarding a new joiner?** See [skills-matrix.md](skills-matrix.md) - the per-role skillsets (Core / Ramp-up / Bonus) needed to understand and contribute to this platform.
+
 ## Team at a glance
 
 | Seat | Role | On team from |
