@@ -4,7 +4,7 @@
 
 | Brief | Seats | S1 load |
 |---|---|---|
-| [AWS / MLOps Engineering](role-brief-aws-mlops.md) | AWS, AWS2, AWS3 | 7.0 d |
+| [AWS / MLOps Engineering](role-brief-aws-mlops.md) | AWS, AWS2 | 6.0 d |
 | [SAS Development](role-brief-sas.md) | SAS, SAS2, SAS3 | 7.5 d |
 | [Data Engineering](role-brief-data-engineer.md) | DE | 4.0 d |
 | [DevOps Engineering](role-brief-devops.md) | DevOps | 5.5 d |
@@ -14,9 +14,8 @@
 
 | Seat | Role | On team from |
 |---|---|---|
-| AWS | AWS/MLOps Eng #1 - Foundation/Infra | Sprint 1 |
-| AWS2 | AWS/MLOps Eng #2 - Platform Services | Sprint 1 |
-| AWS3 | AWS/MLOps Eng #3 - Compute/MLOps | Sprint 1 |
+| AWS | AWS/MLOps Eng #1 - Foundation & Infra | Sprint 1 |
+| AWS2 | AWS/MLOps Eng #2 - Platform, Compute & MLOps | Sprint 1 |
 | DE | Data Engineer | Sprint 1 |
 | SAS | SAS Developer #1 (Model 1 / Group 2) | Sprint 1 |
 | SAS2 | SAS Developer #2 (Model 2 / Group 2) | Sprint 1 |
