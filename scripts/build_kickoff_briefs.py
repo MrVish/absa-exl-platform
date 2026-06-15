@@ -46,22 +46,23 @@ GROUPS = {
     "aws-mlops": {
         "file": "role-brief-aws-mlops.md",
         "title": "AWS / MLOps Engineering",
-        "seats": ["AWS", "AWS2", "AWS3"],
+        "seats": ["AWS", "AWS2"],
         "mission": (
-            "You are three engineers running three parallel streams so the AWS foundation - the tightest "
-            "track in any single-engineer version of this plan - never becomes the bottleneck. The platform's "
-            "Terraform already exists (modules + per-env stacks) but has only ever run against LocalStack; your "
-            "job is to take it to real EXL accounts and operate it.\n\n"
-            "- **AWS #1 - Foundation/Infra:** account bootstrap, state backends, landing zone, networking to ABSA, "
-            "S3 replication, retention. The base everything else sits on.\n"
-            "- **AWS #2 - Platform Services:** signing foundation (KMS), registry-on-Lambda, cross-account verify, "
-            "plus the IAM least-privilege + encryption-validation security work.\n"
-            "- **AWS #3 - Compute/MLOps:** the D04 compute decision, real Step Functions execution, the compute "
-            "layer, EventBridge schedules, production scoring, performance, and DR.\n\n"
-            "**Front-loading is deliberate:** all three of you are busy S1-S7 building the foundation, then load "
-            "drops sharply. After S7, AWS #2 and AWS #3 can ramp down or redeploy to model-optimization / MLOps "
-            "support - that plan is made at the S5 capacity review. The late-program slack you'll see in your grid "
-            "is the buffer that absorbs a late-ABSA-account-IDs slip without moving any gate date."
+            "You are two engineers splitting the AWS foundation between Infra and Platform/Compute so it never "
+            "becomes the bottleneck it would be for one person. The platform's Terraform already exists (modules + "
+            "per-env stacks) but has only ever run against LocalStack; your job is to take it to real EXL accounts "
+            "and operate it.\n\n"
+            "- **AWS #1 - Foundation & Infra:** account bootstrap, state backends, landing zone, networking to "
+            "ABSA, S3 replication, retention, and the Group 2 pipeline-deploy tail. The base everything sits on.\n"
+            "- **AWS #2 - Platform, Compute & MLOps:** signing foundation (KMS), registry-on-Lambda, cross-account "
+            "verify, the IAM least-privilege + encryption-validation security work, the D04 compute decision, real "
+            "Step Functions execution, the compute layer, schedules, production scoring, perf, and DR.\n\n"
+            "**Front-loading is deliberate:** both of you are busiest S1-S7 building the foundation (peaks ~6 "
+            "d/sprint = 75%, same as the rest of the team), then load drops. After S7, AWS #2 can ramp down or "
+            "redeploy to MLOps/optimization support - planned at the S5 capacity review. A 3rd AWS seat was "
+            "considered and dropped as under-utilized: the total AWS workload is only ~62 effort-days, which two "
+            "engineers carry comfortably. The trade-off is a thinner buffer if ABSA account IDs slip - you have "
+            "~2 d/sprint of slack in S2-S5 to absorb it, so flag a slip early."
         ),
         "reading": [
             "[docs/technical-overview.md](../technical-overview.md) - the system end-to-end",

@@ -4,23 +4,21 @@
 
 ## Mission
 
-You are three engineers running three parallel streams so the AWS foundation - the tightest track in any single-engineer version of this plan - never becomes the bottleneck. The platform's Terraform already exists (modules + per-env stacks) but has only ever run against LocalStack; your job is to take it to real EXL accounts and operate it.
+You are two engineers splitting the AWS foundation between Infra and Platform/Compute so it never becomes the bottleneck it would be for one person. The platform's Terraform already exists (modules + per-env stacks) but has only ever run against LocalStack; your job is to take it to real EXL accounts and operate it.
 
-- **AWS #1 - Foundation/Infra:** account bootstrap, state backends, landing zone, networking to ABSA, S3 replication, retention. The base everything else sits on.
-- **AWS #2 - Platform Services:** signing foundation (KMS), registry-on-Lambda, cross-account verify, plus the IAM least-privilege + encryption-validation security work.
-- **AWS #3 - Compute/MLOps:** the D04 compute decision, real Step Functions execution, the compute layer, EventBridge schedules, production scoring, performance, and DR.
+- **AWS #1 - Foundation & Infra:** account bootstrap, state backends, landing zone, networking to ABSA, S3 replication, retention, and the Group 2 pipeline-deploy tail. The base everything sits on.
+- **AWS #2 - Platform, Compute & MLOps:** signing foundation (KMS), registry-on-Lambda, cross-account verify, the IAM least-privilege + encryption-validation security work, the D04 compute decision, real Step Functions execution, the compute layer, schedules, production scoring, perf, and DR.
 
-**Front-loading is deliberate:** all three of you are busy S1-S7 building the foundation, then load drops sharply. After S7, AWS #2 and AWS #3 can ramp down or redeploy to model-optimization / MLOps support - that plan is made at the S5 capacity review. The late-program slack you'll see in your grid is the buffer that absorbs a late-ABSA-account-IDs slip without moving any gate date.
+**Front-loading is deliberate:** both of you are busiest S1-S7 building the foundation (peaks ~6 d/sprint = 75%, same as the rest of the team), then load drops. After S7, AWS #2 can ramp down or redeploy to MLOps/optimization support - planned at the S5 capacity review. A 3rd AWS seat was considered and dropped as under-utilized: the total AWS workload is only ~62 effort-days, which two engineers carry comfortably. The trade-off is a thinner buffer if ABSA account IDs slip - you have ~2 d/sprint of slack in S2-S5 to absorb it, so flag a slip early.
 
 ## The seats in this role
 
-- **AWS** - AWS/MLOps Eng #1 - Foundation/Infra
-- **AWS2** - AWS/MLOps Eng #2 - Platform Services
-- **AWS3** - AWS/MLOps Eng #3 - Compute/MLOps
+- **AWS** - AWS/MLOps Eng #1 - Foundation & Infra
+- **AWS2** - AWS/MLOps Eng #2 - Platform, Compute & MLOps
 
 ## Sprint 1 plan
 
-### AWS (AWS/MLOps Eng #1 - Foundation/Infra) - 5.0 effort-days
+### AWS (AWS/MLOps Eng #1 - Foundation & Infra) - 5.0 effort-days
 
 | Task | Est (d) | Acceptance / Notes | Blocked on |
 |---|---|---|---|
@@ -30,27 +28,19 @@ You are three engineers running three parallel streams so the AWS foundation - t
 | T-0302 tfvars templates per env (awaiting account IDs) | 1.0 | CloudTrail/GuardDuty/SecurityHub live in 3 EXL accounts; TF state backends operational. | - |
 | T-0303 State backend design: S3 + DynamoDB locks per account | 1.0 | CloudTrail/GuardDuty/SecurityHub live in 3 EXL accounts; TF state backends operational. | - |
 
-### AWS2 (AWS/MLOps Eng #2 - Platform Services) - 1.0 effort-days
+### AWS2 (AWS/MLOps Eng #2 - Platform, Compute & MLOps) - 1.0 effort-days
 
 | Task | Est (d) | Acceptance / Notes | Blocked on |
 |---|---|---|---|
 | T-0101b Clone repo, uv sync, tests green locally | 0.5 | All engineers: 278-test suite green + `make demo` exit 0 locally; walkthrough attended. | - |
 | T-0105b Run `make demo` green locally | 0.5 | All engineers: 278-test suite green + `make demo` exit 0 locally; walkthrough attended. | - |
 
-### AWS3 (AWS/MLOps Eng #3 - Compute/MLOps) - 1.0 effort-days
-
-| Task | Est (d) | Acceptance / Notes | Blocked on |
-|---|---|---|---|
-| T-0101c Clone repo, uv sync, tests green locally | 0.5 | All engineers: 278-test suite green + `make demo` exit 0 locally; walkthrough attended. | - |
-| T-0105c Run `make demo` green locally | 0.5 | All engineers: 278-test suite green + `make demo` exit 0 locally; walkthrough attended. | - |
-
 ## Your load across the program (effort-days/sprint)
 
 | Seat | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | Cap |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS | 5.0 | 6.0 | 3.0 | 2.5 | - | 2.0 | 2.0 | - | 3.0 | 3.0 | 5.5 | - | 8 |
-| AWS2 | 1.0 | 2.0 | 3.5 | 5.0 | - | - | 3.0 | - | - | - | - | - | 8 |
-| AWS3 | 1.0 | - | 1.0 | - | 5.0 | 6.0 | 2.0 | 0.5 | - | - | - | - | 8 |
+| AWS | 5.0 | 6.0 | 3.0 | 2.5 | - | 2.0 | 2.0 | - | 3.0 | 3.0 | 2.0 | - | 8 |
+| AWS2 | 1.0 | 2.0 | 4.5 | 5.0 | 5.0 | 6.0 | 5.0 | 0.5 | - | - | 3.5 | - | 8 |
 
 _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus factor. Loads sit below cap on purpose - the gap is ceremonies, review, and slack for the unknowns._
 
@@ -59,10 +49,8 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 **S1 (Jun 15-Jun 26)** - _Team onboarded; Jenkins identity decided; python-validate green on Jenkins; ABSA ask-list sent_
 - [AWS] Clone repo, uv sync, run full 278-test suite locally (0.5d)
 - [AWS2] Clone repo, uv sync, tests green locally (0.5d)
-- [AWS3] Clone repo, uv sync, tests green locally (0.5d)
 - [AWS] Run `make demo` (LocalStack chain) green locally (0.5d)
 - [AWS2] Run `make demo` green locally (0.5d)
-- [AWS3] Run `make demo` green locally (0.5d)
 - [AWS] Module/stack review: gap notes vs real-AWS apply (2.0d)
 - [AWS] tfvars templates per env (awaiting account IDs) (1.0d)
 - [AWS] State backend design: S3 + DynamoDB locks per account (1.0d)
@@ -79,7 +67,7 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [AWS2] Apply signing stack to exl-prod; CMK + buckets + roles live (1.0d)
 - [AWS2] Run publish-key; PEM in public bucket (0.5d)
 - [AWS2] Lambda packaging for registry-api (adapter + artifact build) (2.0d)
-- [AWS3] ADR: D04 compute choice (SFN+Lambda vs SageMaker) w/ architecture board (1.0d)
+- [AWS2] ADR: D04 compute choice (SFN+Lambda vs SageMaker) w/ architecture board (1.0d)
 
 **S4 (Jul 27-Aug 07)** - _Registry API live on Lambda (dev); replication path validated; model-1 packaged; threat model done_
 - [AWS2] Cross-account verify test with real ABSA principal (1.0d)
@@ -90,14 +78,14 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [AWS] Encrypted transfer validated end-to-end with ABSA test object (1.0d)
 
 **S5 (Aug 10-Aug 21)** - _SFN executes model-1 in dev; PIR sync; model-2 optimized; CAPACITY REVIEW (scale-up decision)_
-- [AWS3] Deploy real ASL standard-batch for model-1 (dev) (3.0d)
-- [AWS3] Build compute layer - core (Lambda container / SM Processing per D04) (2.0d)
+- [AWS2] Deploy real ASL standard-batch for model-1 (dev) (3.0d)
+- [AWS2] Build compute layer - core (Lambda container / SM Processing per D04) (2.0d)
 
 **S6 (Aug 24-Sep 04)** - _DRESS REHEARSAL: full chain on real AWS for models 1-2; dashboards + perf harness; POPIA/SARB check_
-- [AWS3] Build compute layer - finalize + integrate (2.0d)
-- [AWS3] EventBridge schedules per model cadence (1.0d)
-- [AWS3] Promote pipeline infra to prod (2.0d)
-- [AWS3] Define SLA bands per model cadence (1.0d)
+- [AWS2] Build compute layer - finalize + integrate (2.0d)
+- [AWS2] EventBridge schedules per model cadence (1.0d)
+- [AWS2] Promote pipeline infra to prod (2.0d)
+- [AWS2] Define SLA bands per model cadence (1.0d)
 - [AWS] Dress rehearsal infra support + fixes (2.0d)
 
 **S7 (Sep 07-Sep 18)** - _Group 1 initial production scoring; reconciliation; perf + resilience tests; UAT plan_
@@ -105,10 +93,10 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [AWS] Pre-go-live access review + least-privilege audit (1.0d)
 - [AWS2] IAM least-privilege audit (automated policy analysis) (1.5d)
 - [AWS2] Encryption validation: in-transit (TLS/replication) + at-rest (KMS) evidence (1.5d)
-- [AWS3] Initial production scoring runs (models 1-2) (2.0d)
+- [AWS2] Initial production scoring runs (models 1-2) (2.0d)
 
 **S8 (Sep 21-Oct 02)** - _GROUP 1 ABSA SIGN-OFF; pen-test remediation; 2nd SAS dev onboarded; G2 plan_
-- [AWS3] G1 production schedules confirmed live (0.5d)
+- [AWS2] G1 production schedules confirmed live (0.5d)
 
 **S9 (Oct 05-Oct 16)** - _Group 2 wave 1 (models 3-5) live; dashboards validated with ABSA; cost dashboard_
 - [AWS] Model 3: deploy to prod + smoke (0.5d)
@@ -127,8 +115,8 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [AWS] Model 8: pipeline config + EventBridge schedule (0.5d)
 
 **S11 (Nov 02-Nov 13)** - _Group 2 wave 3 (models 9-10) live - ALL 10 MODELS SCORING; runbooks; DR verified_
-- [AWS] Cost review + right-sizing pass (2.0d)
-- [AWS] DR plan + backup/restore verification (1.5d)
+- [AWS2] Cost review + right-sizing pass (2.0d)
+- [AWS2] DR plan + backup/restore verification (1.5d)
 - [AWS] Model 9: deploy to prod + smoke (0.5d)
 - [AWS] Model 9: pipeline config + EventBridge schedule (0.5d)
 - [AWS] Model 10: deploy to prod + smoke (0.5d)
