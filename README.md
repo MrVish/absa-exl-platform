@@ -60,8 +60,9 @@ EXL delivers a **production-grade, audit-ready ML hosting platform** that:
   optimises, packages, signs);
 - **scores it on a schedule** on EXL-operated AWS infrastructure;
 - **reconciles every run** against the developer's reference outputs;
-- returns auditable results to ABSA — **without raw PII ever leaving ABSA's
-  trust boundary** (see [1.4](#14-the-pii--trust-boundary-principle)).
+- returns auditable results to ABSA — keeping **raw PII inside ABSA's AWS
+  account**: only curated, model-ready data (no raw identifiers) crosses to EXL
+  (see [1.4](#14-the-pii--trust-boundary-principle)).
 
 Initial cohort: **10 models.** The platform is deliberately built so onboarding
 the 11th / 20th / 50th model is **template-driven configuration, not a bespoke
@@ -90,8 +91,9 @@ The platform supports two distinct, registry-linked flows.
 
 **Track B — Scheduled Scoring & Delivery** *(recurring)*
 
-1. ABSA's scheduler triggers a data hand-off; scoring inputs replicate
-   cross-account into EXL via **encrypted S3 replication**.
+1. ABSA's scheduler triggers a data hand-off; **model-ready** scoring inputs
+   (curated in ABSA, raw identifiers removed) replicate cross-account into EXL
+   via **encrypted S3 replication**. Raw PII stays in ABSA.
 2. **EventBridge** fires the model's schedule → **Step Functions** runs the
    generated pipeline.
 3. The **scoring compute** (Lambda container / SageMaker Processing) executes the
@@ -117,11 +119,27 @@ class**, so each tier's controls are built once and reused:
 ### 1.4 The PII / trust-boundary principle
 
 The hard constraint that shapes the whole architecture: **raw PII never leaves
-ABSA's trust boundary.** EXL operates the scoring runtime, but the cross-account
-hand-offs are **cryptographically verifiable** (signed manifests, public-key
-verification) and the data plane is **KMS-encrypted with object-lock**. ABSA can
-independently verify every artefact EXL produces using only the published public
-key — they never have to trust EXL's word, only the maths.
+ABSA's AWS account.** What actually crosses the ABSA → EXL boundary — via
+encrypted S3 replication, per [ADR-0001](docs/adr/0001-data-movement-s3-replication.md)
+— is **model-ready data** (already curated inside ABSA, with raw identifiers
+removed) plus the signed model code. So data *does* land in EXL's account, but
+**raw PII does not**; this is the POPIA data-sovereignty posture (consistent with
+[technical-overview](docs/technical-overview.md)).
+
+Everything that crosses is held to a controlled, auditable perimeter:
+
+- **Encrypted at rest both sides** with per-env KMS CMKs; **object-lock**
+  (7-yr prod retention) on the buckets.
+- **PrivateLink is control-plane only** (registry / status / delivery APIs);
+  bulk data uses S3 replication, never the public internet, with no third-party
+  data-mover in the path.
+- **Full CloudTrail lineage** in both accounts; least-privilege replication role.
+- Cross-account hand-offs are **cryptographically verifiable** — ABSA verifies
+  every artefact EXL produces with only the published public key, never having
+  to trust EXL's word, only the maths.
+
+> Whether "model-ready, de-identified" data is fully outside POPIA scope is an
+> ABSA compliance determination, tracked separately — not asserted here.
 
 ---
 
