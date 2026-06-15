@@ -1,41 +1,41 @@
-# Sprint 1 Kickoff Briefs
+# Kickoff Briefs - 9-Person Team (grouped by role)
 
-One brief per person. Hand each engineer their own file on day 1.
+**Sprint 1: Mon Jun 15 -> Fri Jun 26, 2026.** One brief per role group. Generated from [`docs/absa-exl-agile-plan.xlsx`](../absa-exl-agile-plan.xlsx) via `scripts/build_kickoff_briefs.py`, so they never drift from the backlog.
 
-**Sprint 1: Mon 2026-06-15 → Fri 2026-06-26** (10 working days).
-
-| Brief | Role | Sprint 1 load |
+| Brief | Seats | S1 load |
 |---|---|---|
-| [sprint-1-brief-devops.md](sprint-1-brief-devops.md) | DevOps Engineer | 5.5 d |
-| [sprint-1-brief-aws-mlops.md](sprint-1-brief-aws-mlops.md) | AWS / MLOps Engineer | 5.0 d |
-| [sprint-1-brief-sas-developer.md](sprint-1-brief-sas-developer.md) | SAS Developer | 5.0 d |
-| [sprint-1-brief-data-engineer.md](sprint-1-brief-data-engineer.md) | Data Engineer | 4.0 d |
-| [sprint-1-brief-tech-lead.md](sprint-1-brief-tech-lead.md) | Tech Lead | 4.5 d |
+| [AWS / MLOps Engineering](role-brief-aws-mlops.md) | AWS, AWS2, AWS3 | 7.0 d |
+| [SAS Development](role-brief-sas.md) | SAS, SAS2, SAS3 | 7.5 d |
+| [Data Engineering](role-brief-data-engineer.md) | DE | 4.0 d |
+| [DevOps Engineering](role-brief-devops.md) | DevOps | 5.5 d |
+| [Tech Lead (Vishnu)](role-brief-tech-lead.md) | TL | 4.5 d |
 
-Loads are below the 8 d/sprint capacity (6 d for TL) on purpose: the
-remainder is ceremonies, reviews, reading, and slack for the unknowns every
-first sprint has.
+## Team at a glance
 
-Source of truth for all task IDs: [`docs/absa-exl-agile-plan.xlsx`](../absa-exl-agile-plan.xlsx)
-(Backlog sheet). If a brief and the backlog disagree, the backlog wins.
+| Seat | Role | On team from |
+|---|---|---|
+| AWS | AWS/MLOps Eng #1 - Foundation/Infra | Sprint 1 |
+| AWS2 | AWS/MLOps Eng #2 - Platform Services | Sprint 1 |
+| AWS3 | AWS/MLOps Eng #3 - Compute/MLOps | Sprint 1 |
+| DE | Data Engineer | Sprint 1 |
+| SAS | SAS Developer #1 (Model 1 / Group 2) | Sprint 1 |
+| SAS2 | SAS Developer #2 (Model 2 / Group 2) | Sprint 1 |
+| SAS3 | SAS Developer #3 (Group 2, from S8) | Sprint 8 |
+| DevOps | DevOps Engineer | Sprint 1 |
+| TL | Tech Lead (Vishnu) | Sprint 1 |
 
-## Working agreement (applies to everyone)
+## Is the plan achievable? (audited)
 
-- **Branch-based flow.** No direct pushes to `main`. Every change is a PR;
-  CI must be green before merge. CODEOWNERS review applies.
-- **Daily standup, 15 min.** What moved, what's next, what's blocked.
-  A blocker older than one day gets escalated in standup, not discovered at review.
-- **Definition of Done** (per task): code merged to `main`, tests green,
-  docs updated if behaviour changed, acceptance criteria from the backlog met.
-- **Demo on the last Friday.** Each person shows their slice of the sprint
-  goal working — not slides, the actual thing.
-- **Estimates are effort, not elapsed.** If a 1-day task is 3 days in, say so
-  at standup — re-planning is normal; silent slippage is not.
+`scripts/audit_agile_plan.py` checks the plan for feasibility, not just capacity. As of the last run it **passes**:
+
+- **Dependency ordering** - no task depends on work scheduled in a later sprint (no impossible orderings).
+- **Capacity** - no role exceeds its cap in any sprint. Peak engineer load is DevOps S2 at 88%; peak overall is TL at 92% in the two sign-off sprints (S8, S12).
+- **Sprint 1 is fully unblocked** - zero ABSA-dependent tasks land in S1, so the team is productive from day one regardless of ABSA timing.
+- **Model coverage** - all 10 models have complete onboarding-stage coverage; all 10 are live by S11.
+- **Integrity** - every task maps to a real story and epic; no empty stories.
+
+Re-run any time after editing the plan: `uv run --with openpyxl python scripts/audit_agile_plan.py`.
 
 ## The one sentence that matters
 
-The platform (registry, pipeline factory, signer, code intake, LocalStack
-demo) is **already built and regression-tested** — your job in this program
-is to put it on real AWS, swap CI to Jenkins, onboard 10 SAS models through
-it, and run it in production. Sprint 1 is about getting you productive and
-making the first structural decisions.
+The platform (registry, pipeline factory, signer, code intake, LocalStack demo) is **already built and regression-tested** - your job is to put it on real AWS, swap CI to Jenkins, onboard 10 SAS models through it, and run it in production. Sprint 1 is about getting productive and making the first structural decisions.
