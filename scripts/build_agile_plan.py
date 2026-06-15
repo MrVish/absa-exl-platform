@@ -4,18 +4,20 @@ Re-anchors the program to the real team start (Sprint 1 = 2026-06-15) and
 decomposes it into a capacity-checked EPIC -> Story -> Task backlog across 12
 two-week sprints.
 
-Team & scale-up decision (locked with the user):
-  Keep 12 sprints. At the ~2-month mark (Sprint 5) hold a formal capacity
-  review; if approved, a 2nd SAS developer (role SAS2) onboards in Sprint 8
-  and runs Group 2 alongside the first SAS dev from Sprint 9. The plan is
-  built ASSUMING that approval; the fallback (if declined) is to extend
-  Group 2 across more sprints -- see README.
+Team shape - MAX COVERAGE (locked with the user) to make 12 sprints solid:
+  9 people. 3 AWS/MLOps engineers split the foundation crunch into streams;
+  3 SAS developers (two from S1 run Group 1 models 1 & 2 in parallel, a third
+  joins S8 for Group 2). Group 2's 8 models are compressed into S9-S11 so all
+  10 are live by end S11, leaving S12 for hardening + sign-off + handover.
 
 Roles:
-  AWS     - AWS / MLOps engineer
+  AWS     - AWS/MLOps engineer #1 (Foundation/Infra)
+  AWS2    - AWS/MLOps engineer #2 (Platform Services)
+  AWS3    - AWS/MLOps engineer #3 (Compute/MLOps)
   DE      - Data engineer
-  SAS     - SAS developer (model code optimization)
-  SAS2    - 2nd SAS developer (joins Sprint 8, pending the S5 review)
+  SAS     - SAS developer #1 (Model 1, then Group 2)
+  SAS2    - SAS developer #2 (Model 2, then Group 2)
+  SAS3    - SAS developer #3 (joins Sprint 8, Group 2)
   DevOps  - DevOps engineer (Jenkins, CI/CD, monitoring)
   TL      - Tech lead / platform engineer (Vishnu)
 
@@ -69,22 +71,28 @@ BORDER_THIN = Border(
 ALIGN_LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
 ALIGN_CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-ROLES = ["AWS", "DE", "SAS", "SAS2", "DevOps", "TL"]
+ROLES = ["AWS", "AWS2", "AWS3", "DE", "SAS", "SAS2", "SAS3", "DevOps", "TL"]
 ROLE_NAMES = {
-    "AWS": "AWS / MLOps Engineer",
+    "AWS": "AWS/MLOps Eng #1 - Foundation/Infra",
+    "AWS2": "AWS/MLOps Eng #2 - Platform Services",
+    "AWS3": "AWS/MLOps Eng #3 - Compute/MLOps",
     "DE": "Data Engineer",
-    "SAS": "SAS Developer",
-    "SAS2": "SAS Developer #2 (from S8)",
+    "SAS": "SAS Developer #1 (Model 1 / Group 2)",
+    "SAS2": "SAS Developer #2 (Model 2 / Group 2)",
+    "SAS3": "SAS Developer #3 (Group 2, from S8)",
     "DevOps": "DevOps Engineer",
     "TL": "Tech Lead (Vishnu)",
 }
-BASE_CAP = {"AWS": 8.0, "DE": 8.0, "SAS": 8.0, "SAS2": 8.0, "DevOps": 8.0, "TL": 6.0}
-SAS2_START_SPRINT = 8
+BASE_CAP = {
+    "AWS": 8.0, "AWS2": 8.0, "AWS3": 8.0, "DE": 8.0,
+    "SAS": 8.0, "SAS2": 8.0, "SAS3": 8.0, "DevOps": 8.0, "TL": 6.0,
+}
+SAS3_START_SPRINT = 8  # 3rd SAS dev onboards S8 for Group 2 (confirmed at S5 review)
 
 
 def capacity(role: str, sprint: int) -> float:
     """Effective effort-day capacity for a role in a given sprint."""
-    if role == "SAS2" and sprint < SAS2_START_SPRINT:
+    if role == "SAS3" and sprint < SAS3_START_SPRINT:
         return 0.0
     return BASE_CAP[role]
 
@@ -107,10 +115,10 @@ SPRINT_GOALS = {
     6: ("DRESS REHEARSAL: full chain on real AWS for models 1-2; dashboards + perf harness; POPIA/SARB check", "Dress rehearsal pass"),
     7: ("Group 1 initial production scoring; reconciliation; perf + resilience tests; UAT plan", ""),
     8: ("GROUP 1 ABSA SIGN-OFF; pen-test remediation; 2nd SAS dev onboarded; G2 plan", "*** GROUP 1 SIGN-OFF ***"),
-    9: ("Group 2 wave 1 (models 3-4) live; dashboards validated with ABSA; cost dashboard", ""),
-    10: ("Group 2 wave 2 (models 5-6) live; output delivery automated", ""),
-    11: ("Group 2 wave 3 (models 7-8) live; runbooks; DR verified; support rota", ""),
-    12: ("Group 2 wave 4 (models 9-10) live; GROUP 2 SIGN-OFF; handover; steady-state go-live", "*** GROUP 2 SIGN-OFF + GO-LIVE ***"),
+    9: ("Group 2 wave 1 (models 3-5) live; dashboards validated with ABSA; cost dashboard", ""),
+    10: ("Group 2 wave 2 (models 6-8) live; output delivery automated", ""),
+    11: ("Group 2 wave 3 (models 9-10) live - ALL 10 MODELS SCORING; runbooks; DR verified", "All 10 models live"),
+    12: ("HARDENING ONLY (no new models): GROUP 2 SIGN-OFF; handover; hypercare; steady-state go-live", "*** GROUP 2 SIGN-OFF + GO-LIVE ***"),
 }
 
 # ---------- EPICs ----------
@@ -120,8 +128,9 @@ EPICS = [
      "Everyone productive in week 1: repo green locally, board live, ABSA dependency register running."),
     ("E02", "CI/CD on Existing Jenkins", "DevOps", "S1-S3",
      "Migrate all 6 CI gates from GitHub Actions to the standalone Jenkins per ADR-0011; retire GHA."),
-    ("E03", "AWS Foundation (Real Accounts)", "AWS", "S1-S4",
-     "Bootstrap real EXL accounts, landing zone, signing foundation, registry-on-Lambda, replication path."),
+    ("E03", "AWS Foundation (Real Accounts)", "AWS x3", "S1-S4",
+     "Bootstrap real EXL accounts, landing zone, signing foundation, registry-on-Lambda, replication path. "
+     "Split across 3 AWS streams: Foundation/Infra (AWS), Platform Services (AWS2), Compute/MLOps (AWS3)."),
     ("E04", "Data Engineering & Quality", "DE", "S1-S7",
      "Data contracts, ingestion validation, DQ (volume+drift), reconciliation, lineage, retention, PIR."),
     ("E05", "SAS Model Engineering - Standards & Tooling", "SAS", "S1-S3",
@@ -134,14 +143,15 @@ EPICS = [
      "Models 1-2: review, optimize, package, reconcile vs ABSA benchmarks. The proof of the chain."),
     ("E09", "Observability, Dashboards & Delivery", "DevOps", "S4-S9",
      "Run-status dashboards, alerting, DQ/drift panels, cost dashboard, automated signed output delivery."),
-    ("E10", "Group 2 - Scale-Out (Models 3-10)", "SAS", "S8-S12",
-     "Template-driven onboarding, 2 models/sprint across 4 waves (SAS + SAS2), Group 2 sign-off."),
+    ("E10", "Group 2 - Scale-Out (Models 3-10)", "SAS x3", "S8-S11",
+     "Template-driven onboarding across 3 SAS devs: 3 models/sprint in S9-S10, 2 in S11. ALL 10 models "
+     "scoring by end S11; S12 is hardening + sign-off only (no new model onboarding)."),
     ("E11", "Steady State, Hypercare & Handover", "TL", "S8-S12",
      "Production readiness, cutover rehearsal, runbooks, DR, hypercare, service review, handover, go-live."),
     ("E12", "Testing, UAT & Performance", "TL", "S5-S8",
      "Integration tests on real AWS, performance/load vs SLA, failure-mode/resilience, UAT with ABSA, regression pack."),
     ("E13", "Capacity & Resourcing", "TL", "S5-S8",
-     "2-month capacity review (scale-up gate), 2nd SAS developer sourcing + onboarding for Group 2."),
+     "2-month capacity review; confirm 3rd SAS dev onboarding (S8) + AWS ramp-down plan after foundation (S7)."),
 ]
 
 # ---------- Stories ----------
@@ -189,10 +199,10 @@ STORIES = [
      "Prod-readiness standards published; SAS runtime obtained; static_sas upgraded to real lint."),
     ("ST-0504", "E05", "Reconciliation framework", "S4-S6", "Must",
      "Diff tool with tolerance bands + per-variable deltas; PIR-ready report template."),
-    ("ST-0502", "E08", "Model 1 onboarding", "S2-S4", "Must",
+    ("ST-0502", "E08", "Model 1 onboarding (SAS #1)", "S2-S4", "Must",
      "Optimized code reconciles vs ABSA benchmarks; packaged per ADR-0010; code-intake green."),
-    ("ST-0503", "E08", "Model 2 onboarding", "S4-S6", "Must",
-     "Same exit criteria as model 1."),
+    ("ST-0503", "E08", "Model 2 onboarding (SAS #2, in parallel)", "S2-S6", "Must",
+     "Same exit criteria as model 1; runs in parallel on the 2nd SAS dev to de-risk the proof."),
     ("ST-0601", "E06", "Compute platform decision (D04)", "S3", "Must",
      "ADR records SFN+Lambda vs SageMaker choice with ABSA architecture board."),
     ("ST-0602", "E06", "Step Functions runtime execution", "S5-S6", "Must",
@@ -227,11 +237,12 @@ STORIES = [
      "Per-pipeline alarms baseline; cost & usage dashboard."),
     ("ST-1001", "E10", "Group 2 onboarding plan", "S8", "Must",
      "Per-model checklist derived from G1 lessons; wave allocation agreed."),
-    ("ST-1002", "E10", "Wave 1: models 3-4", "S9", "Must", "Both models scoring in prod, reconciled, PIR'd."),
-    ("ST-1003", "E10", "Wave 2: models 5-6", "S10", "Must", "Same exit criteria."),
-    ("ST-1004", "E10", "Wave 3: models 7-8", "S11", "Must", "Same exit criteria."),
-    ("ST-1005", "E10", "Wave 4: models 9-10 + Group 2 sign-off", "S12", "Must",
-     "All 10 models live; written Group 2 sign-off."),
+    ("ST-1002", "E10", "Wave 1: models 3-5 (3 SAS devs)", "S9", "Must", "All three models scoring in prod, reconciled, PIR'd."),
+    ("ST-1003", "E10", "Wave 2: models 6-8 (3 SAS devs)", "S10", "Must", "Same exit criteria."),
+    ("ST-1004", "E10", "Wave 3: models 9-10 - ALL 10 LIVE", "S11", "Must",
+     "Final 2 models scoring; all 10 models live by end S11; 3rd SAS dev floats on reconciliation/defects."),
+    ("ST-1005", "E10", "S12 hardening + Group 2 sign-off", "S12", "Must",
+     "No new models. Final reconciliation sweep, defect closure, KT; written Group 2 sign-off."),
     ("ST-1101", "E11", "Runbooks & support model", "S11", "Must",
      "Incident/recovery/rollback runbooks; support rota + escalation matrix."),
     ("ST-1102", "E11", "Handover & go-live", "S12", "Must",
@@ -244,10 +255,10 @@ STORIES = [
      "UAT plan + scripts; UAT executed with ABSA on Group 1; sign-off captured."),
     ("ST-1203", "E12", "Regression test pack", "S8", "Should",
      "Regression pack for ongoing changes wired into CI."),
-    ("ST-1301", "E13", "Capacity review & scale-up", "S5-S8", "Must",
-     "2-month velocity review; decision on 2nd SAS dev; sourcing initiated; onboarded by S8."),
-    ("ST-1302", "E13", "2nd SAS developer onboarding", "S8", "Must",
-     "SAS2 productive: env green, standards studied, G1 reconciliation shadowed."),
+    ("ST-1301", "E13", "Capacity review & AWS ramp-down", "S5-S8", "Must",
+     "2-month velocity review; confirm 3rd SAS dev onboarding (S8); plan AWS ramp-down/redeploy after S7 foundation."),
+    ("ST-1302", "E13", "3rd SAS developer onboarding", "S8", "Must",
+     "SAS3 productive: env green, standards studied, G1 reconciliation shadowed."),
 ]
 
 # ---------- Tasks (explicit, Sprints 1-8 IDs stable for the kickoff briefs) ----------
@@ -262,6 +273,12 @@ TASKS = [
     ("T-0106", "ST-0101", "Run `make demo` (LocalStack chain) green locally", "DE", 1, 0.5, "T-0102", "", ""),
     ("T-0107", "ST-0101", "Run `make demo` (LocalStack chain) green locally", "SAS", 1, 0.5, "T-0103", "", ""),
     ("T-0108", "ST-0101", "Run `make demo` (LocalStack chain) green locally", "DevOps", 1, 0.5, "T-0104", "", ""),
+    ("T-0101b", "ST-0101", "Clone repo, uv sync, tests green locally", "AWS2", 1, 0.5, "", "", ""),
+    ("T-0101c", "ST-0101", "Clone repo, uv sync, tests green locally", "AWS3", 1, 0.5, "", "", ""),
+    ("T-0103b", "ST-0101", "Clone repo, uv sync, tests green locally", "SAS2", 1, 0.5, "", "", ""),
+    ("T-0105b", "ST-0101", "Run `make demo` green locally", "AWS2", 1, 0.5, "T-0101b", "", ""),
+    ("T-0105c", "ST-0101", "Run `make demo` green locally", "AWS3", 1, 0.5, "T-0101c", "", ""),
+    ("T-0107b", "ST-0101", "Run `make demo` green locally", "SAS2", 1, 0.5, "T-0103b", "", ""),
     ("T-0109", "ST-0101", "Host architecture walkthrough: chain-of-custody, repo tour, ADR index", "TL", 1, 1.0, "", "", "Record for future joiners"),
     ("T-0110", "ST-0102", "Stand up Jira/ADO board; import this EPIC/Story/Task tree", "TL", 1, 1.0, "", "", "Backlog sheet is the import source"),
     ("T-0111", "ST-0102", "Publish Definition of Ready/Done + PR / branch-protection workflow", "TL", 1, 0.5, "", "", ""),
@@ -294,15 +311,15 @@ TASKS = [
     ("T-0306", "ST-0302", "Apply landing-zone module (dev first)", "AWS", 2, 2.0, "T-0304", "", ""),
     ("T-0307", "ST-0302", "Implement network connectivity per ABSA decision", "AWS", 3, 3.0, "T-0306", "ABSA: network choice", "VPC peering / TGW / PrivateLink"),
     ("T-0308", "ST-0302", "IP whitelisting coordination with ABSA network team", "AWS", 2, 1.0, "T-0306", "ABSA: network choice", ""),
-    ("T-0309", "ST-0303", "identity_provider variable in signing-foundation TF (per T-0202)", "AWS", 2, 2.0, "T-0202", "", "Supports github_actions | jenkins variants during cutover"),
-    ("T-0310", "ST-0303", "Apply signing stack to exl-prod; CMK + buckets + roles live", "AWS", 3, 1.0, "T-0309,T-0304", "", ""),
-    ("T-0311", "ST-0303", "Run publish-key; PEM in public bucket", "AWS", 3, 0.5, "T-0310", "", ""),
-    ("T-0312", "ST-0303", "Cross-account verify test with real ABSA principal", "AWS", 4, 1.0, "T-0311", "ABSA: IAM ARNs", ""),
-    ("T-0313", "ST-0304", "Lambda packaging for registry-api (adapter + artifact build)", "AWS", 3, 2.0, "T-0304", "", "Largest demo->prod gap per Phase 3 closeout"),
-    ("T-0314", "ST-0304", "Finish Lambda packaging + tests", "AWS", 4, 1.0, "T-0313", "", ""),
-    ("T-0315", "ST-0304", "Apply APIGW+Lambda+DynamoDB registry stack (dev) + smoke", "AWS", 4, 2.0, "T-0314", "", ""),
+    ("T-0309", "ST-0303", "identity_provider variable in signing-foundation TF (per T-0202)", "AWS2", 2, 2.0, "T-0202", "", "Supports github_actions | jenkins variants during cutover"),
+    ("T-0310", "ST-0303", "Apply signing stack to exl-prod; CMK + buckets + roles live", "AWS2", 3, 1.0, "T-0309,T-0304", "", ""),
+    ("T-0311", "ST-0303", "Run publish-key; PEM in public bucket", "AWS2", 3, 0.5, "T-0310", "", ""),
+    ("T-0312", "ST-0303", "Cross-account verify test with real ABSA principal", "AWS2", 4, 1.0, "T-0311", "ABSA: IAM ARNs", ""),
+    ("T-0313", "ST-0304", "Lambda packaging for registry-api (adapter + artifact build)", "AWS2", 3, 2.0, "T-0304", "", "Largest demo->prod gap per Phase 3 closeout"),
+    ("T-0314", "ST-0304", "Finish Lambda packaging + tests", "AWS2", 4, 1.0, "T-0313", "", ""),
+    ("T-0315", "ST-0304", "Apply APIGW+Lambda+DynamoDB registry stack (dev) + smoke", "AWS2", 4, 2.0, "T-0314", "", ""),
     ("T-0316", "ST-0304", "SigV4 register smoke from pipeline-factory", "TL", 4, 1.0, "T-0315", "", ""),
-    ("T-0317", "ST-0304", "Promote registry to stg + prod", "AWS", 4, 1.0, "T-0316", "", ""),
+    ("T-0317", "ST-0304", "Promote registry to stg + prod", "AWS2", 4, 1.0, "T-0316", "", ""),
     ("T-0318", "ST-0305", "Apply s3-replication source + destination modules", "AWS", 4, 1.5, "T-0306", "ABSA: data movement", ""),
     ("T-0319", "ST-0305", "Encrypted transfer validated end-to-end with ABSA test object", "AWS", 4, 1.0, "T-0318", "ABSA: data movement", ""),
     # E04
@@ -327,9 +344,10 @@ TASKS = [
     ("T-0419", "ST-0407", "Implement + verify S3 retention/archival per model class", "DE", 7, 1.0, "T-0703pol", "", "Pairs with AWS T-0703"),
     # E05
     ("T-0501", "ST-0501", "Study credit-risk-pd package + static_sas checker internals", "SAS", 1, 2.0, "", "", ""),
+    ("T-0501b", "ST-0501", "Study credit-risk-pd package + SAS standards (with SAS #1)", "SAS2", 1, 1.5, "", "", ""),
     ("T-0502", "ST-0501", "SAS prod-readiness standards doc (naming, macros, errors, logging)", "SAS", 1, 2.0, "T-0501", "", ""),
-    ("T-0503", "ST-0501", "Obtain SAS runtime image + license terms from ABSA", "SAS", 2, 0.5, "", "ABSA: SAS runtime", ""),
-    ("T-0504", "ST-0501", "Upgrade static_sas checker from structural to real lint", "SAS", 3, 3.0, "T-0503", "ABSA: SAS runtime", "Pairs with TL on checker plumbing"),
+    ("T-0503", "ST-0501", "Obtain SAS runtime image + license terms from ABSA", "SAS2", 2, 0.5, "", "ABSA: SAS runtime", ""),
+    ("T-0504", "ST-0501", "Upgrade static_sas checker from structural to real lint", "SAS2", 3, 3.0, "T-0503", "ABSA: SAS runtime", "Pairs with TL on checker plumbing"),
     ("T-0514", "ST-0504", "Output diff tool: tolerance bands, per-variable deltas", "SAS", 4, 2.0, "T-0508", "", "Co-design with DE"),
     ("T-0515", "ST-0504", "Reconciliation report template (PIR-ready)", "SAS", 6, 1.0, "T-0514", "", ""),
     # E08 Group 1 model onboarding
@@ -338,17 +356,18 @@ TASKS = [
     ("T-0507", "ST-0502", "Optimize + standardize model-1 scoring code (profile, refactor, unit-test)", "SAS", 3, 4.0, "T-0505", "", ""),
     ("T-0508", "ST-0502", "Regression harness vs ABSA benchmark outputs", "SAS", 4, 2.0, "T-0507", "", ""),
     ("T-0509", "ST-0502", "Package model-1 per ADR-0010; code-intake validate green", "SAS", 4, 1.0, "T-0508", "", ""),
-    ("T-0510", "ST-0503", "Model-2 dev-code review vs benchmark spec", "SAS", 4, 2.0, "T-0502", "", ""),
-    ("T-0511", "ST-0503", "Optimize + standardize model-2 scoring code (profile, refactor, unit-test)", "SAS", 5, 4.0, "T-0510", "", ""),
-    ("T-0512", "ST-0503", "Model-2 regression harness", "SAS", 5, 2.0, "T-0511", "", ""),
-    ("T-0513", "ST-0503", "Package model-2 + code-intake green", "SAS", 6, 1.0, "T-0512", "", ""),
+    ("T-0510", "ST-0503", "Model-2 dev-code review vs benchmark spec", "SAS2", 3, 2.0, "T-0502", "ABSA: model docs", "Parallel to model-1 on SAS #1"),
+    ("T-0511", "ST-0503", "Optimize + standardize model-2 scoring code (profile, refactor, unit-test)", "SAS2", 4, 4.0, "T-0510", "", ""),
+    ("T-0512", "ST-0503", "Model-2 regression harness", "SAS2", 5, 2.0, "T-0511", "", ""),
+    ("T-0513", "ST-0503", "Package model-2 + code-intake green", "SAS2", 5, 1.0, "T-0512", "", ""),
     # E06
-    ("T-0601", "ST-0601", "ADR: D04 compute choice (SFN+Lambda vs SageMaker) w/ architecture board", "AWS", 3, 1.0, "", "", "Gates compute build in S5"),
-    ("T-0602", "ST-0602", "Deploy real ASL standard-batch for model-1 (dev)", "AWS", 5, 3.0, "T-0601,T-0509", "", ""),
-    ("T-0603", "ST-0602", "Build compute layer (Lambda container / SM Processing per D04)", "AWS", 5, 4.0, "T-0601", "", ""),
-    ("T-0604", "ST-0602", "EventBridge schedules per model cadence", "AWS", 6, 1.0, "T-0602", "", ""),
-    ("T-0605", "ST-0603", "Promote pipeline infra to prod", "AWS", 6, 2.0, "T-0602", "", ""),
-    ("T-0606", "ST-0603", "Define SLA bands per model cadence", "AWS", 6, 1.0, "T-0605", "", "Feeds perf test T-1202/1203"),
+    ("T-0601", "ST-0601", "ADR: D04 compute choice (SFN+Lambda vs SageMaker) w/ architecture board", "AWS3", 3, 1.0, "", "", "Gates compute build in S5"),
+    ("T-0602", "ST-0602", "Deploy real ASL standard-batch for model-1 (dev)", "AWS3", 5, 3.0, "T-0601,T-0509", "", ""),
+    ("T-0603", "ST-0602", "Build compute layer - core (Lambda container / SM Processing per D04)", "AWS3", 5, 2.0, "T-0601", "", ""),
+    ("T-0603b", "ST-0602", "Build compute layer - finalize + integrate", "AWS3", 6, 2.0, "T-0603", "", ""),
+    ("T-0604", "ST-0602", "EventBridge schedules per model cadence", "AWS3", 6, 1.0, "T-0602", "", ""),
+    ("T-0605", "ST-0603", "Promote pipeline infra to prod", "AWS3", 6, 2.0, "T-0602", "", ""),
+    ("T-0606", "ST-0603", "Define SLA bands per model cadence", "AWS3", 6, 1.0, "T-0605", "", "Feeds perf test T-1202/1203"),
     # E07
     ("T-0701", "ST-0701", "Map CAB/IVU contract onto registry approve/retire routes (D02)", "TL", 5, 2.0, "", "ABSA: CAB/IVU contract", ""),
     ("T-0702", "ST-0702", "Rotation cadence doc: Jenkins creds, bot PAT, registrar tokens (D03)", "DevOps", 4, 1.0, "T-0211", "", ""),
@@ -356,8 +375,8 @@ TASKS = [
     ("T-0704", "ST-0702", "KMS rotation drill per docs/runbooks/kms-key-rotation.md", "DevOps", 7, 1.0, "T-0311", "", "AWS supports 0.5d"),
     ("T-0705", "ST-0702", "Pre-go-live access review + least-privilege audit", "AWS", 7, 1.0, "T-0310", "", ""),
     ("T-0706", "ST-0703", "Threat model workshop (STRIDE) on cross-account signing chain", "TL", 4, 1.5, "", "", "AWS co-runs"),
-    ("T-0707", "ST-0703", "IAM least-privilege audit (automated policy analysis)", "AWS", 7, 1.5, "T-0310", "", ""),
-    ("T-0708", "ST-0703", "Encryption validation: in-transit (TLS/replication) + at-rest (KMS) evidence", "AWS", 7, 1.5, "T-0318", "", ""),
+    ("T-0707", "ST-0703", "IAM least-privilege audit (automated policy analysis)", "AWS2", 7, 1.5, "T-0310", "", ""),
+    ("T-0708", "ST-0703", "Encryption validation: in-transit (TLS/replication) + at-rest (KMS) evidence", "AWS2", 7, 1.5, "T-0318", "", ""),
     ("T-0709", "ST-0703", "Pen-test coordination + scope with ABSA security", "DevOps", 7, 1.0, "", "", ""),
     ("T-0710", "ST-0703", "Pen-test remediation window", "DevOps", 8, 1.5, "T-0709", "", ""),
     ("T-0711", "ST-0704", "POPIA/SARB control verification vs control-matrix", "TL", 6, 1.5, "", "", ""),
@@ -367,16 +386,16 @@ TASKS = [
     ("T-0802", "ST-0801", "Dress rehearsal infra support + fixes", "AWS", 6, 2.0, "T-0801", "", ""),
     ("T-0803", "ST-0801", "Dress rehearsal model runs + output checks", "SAS", 6, 2.0, "T-0801", "", ""),
     ("T-0804", "ST-0801", "Dress rehearsal CI/pipeline ops", "DevOps", 6, 1.0, "T-0801", "", ""),
-    ("T-0805", "ST-0802", "Initial production scoring runs (models 1-2)", "AWS", 7, 2.0, "T-0801", "", ""),
+    ("T-0805", "ST-0802", "Initial production scoring runs (models 1-2)", "AWS3", 7, 2.0, "T-0801", "", ""),
     ("T-0806", "ST-0802", "Production run monitoring + incident handling", "DevOps", 7, 1.0, "T-0805", "", ""),
     ("T-0807", "ST-0803", "Reconcile G1 outputs vs benchmarks (tolerance report)", "SAS", 7, 3.0, "T-0805,T-0514", "", ""),
-    ("T-0808", "ST-0803", "Defect triage + fix cycle", "SAS", 7, 3.0, "T-0807", "", ""),
+    ("T-0808", "ST-0803", "Defect triage + fix cycle", "SAS2", 7, 3.0, "T-0807", "", ""),
     ("T-0809", "ST-0803", "Defect triage facilitation + ABSA comms", "TL", 7, 1.0, "T-0807", "", ""),
     ("T-0810", "ST-0803", "Defect closure + re-run + final reconciliation", "SAS", 8, 2.0, "T-0808", "", ""),
     ("T-0811", "ST-0804", "PIR evidence pack (reconciliation, DQ, audit trail)", "SAS", 8, 2.0, "T-0810", "", ""),
     ("T-0812", "ST-0804", "PIR data evidence: lineage + DQ reports", "DE", 8, 1.0, "T-0810", "", ""),
     ("T-0813", "ST-0804", "ABSA sign-off review meeting + written sign-off", "TL", 8, 2.0, "T-0811", "", "*** THE program gate ***"),
-    ("T-0814", "ST-0804", "G1 production schedules confirmed live", "AWS", 8, 0.5, "T-0813", "", ""),
+    ("T-0814", "ST-0804", "G1 production schedules confirmed live", "AWS3", 8, 0.5, "T-0813", "", ""),
     # E09
     ("T-0901", "ST-0901", "D08 tooling decision: CloudWatch / Grafana / QuickSight", "DevOps", 4, 1.5, "", "", ""),
     ("T-0902", "ST-0901", "Run-status dashboard build (runs, exceptions, durations)", "DevOps", 6, 3.0, "T-0901", "", ""),
@@ -414,26 +433,28 @@ TASKS = [
     ("T-1207", "ST-1202", "UAT sign-off capture", "TL", 8, 0.5, "T-1206", "", ""),
     ("T-1208", "ST-1203", "Regression test pack for ongoing changes", "DevOps", 8, 1.0, "T-0214", "", ""),
     # E13 Capacity & resourcing
-    ("T-1301", "ST-1301", "2-month capacity & velocity review; decide Group 2 scale-up (2nd SAS dev)", "TL", 5, 0.5, "", "", "*** SCALE-UP GATE ***"),
-    ("T-1302", "ST-1301", "Initiate 2nd SAS dev sourcing/transfer (if approved)", "TL", 6, 0.5, "T-1301", "", ""),
-    ("T-1303", "ST-1301", "Onboard 2nd SAS dev: access + repo + walkthrough", "TL", 8, 0.5, "T-1302", "", ""),
-    ("T-1304", "ST-1302", "Clone repo, uv sync, tests green", "SAS2", 8, 0.5, "T-1303", "", ""),
-    ("T-1305", "ST-1302", "Run `make demo` green locally", "SAS2", 8, 0.5, "T-1304", "", ""),
-    ("T-1306", "ST-1302", "Study SAS standards + a packaged G1 model", "SAS2", 8, 1.0, "T-1304", "", ""),
-    ("T-1307", "ST-1302", "Shadow a G1 reconciliation cycle", "SAS2", 8, 1.0, "T-0810", "", ""),
+    ("T-1301", "ST-1301", "2-month capacity & velocity review; confirm 3rd SAS dev + AWS ramp-down plan", "TL", 5, 0.5, "", "", "*** S5 CAPACITY REVIEW ***"),
+    ("T-1302", "ST-1301", "Initiate 3rd SAS dev sourcing/transfer; plan AWS redeploy after S7", "TL", 6, 0.5, "T-1301", "", ""),
+    ("T-1303", "ST-1301", "Onboard 3rd SAS dev: access + repo + walkthrough", "TL", 8, 0.5, "T-1302", "", ""),
+    ("T-1304", "ST-1302", "Clone repo, uv sync, tests green", "SAS3", 8, 0.5, "T-1303", "", ""),
+    ("T-1305", "ST-1302", "Run `make demo` green locally", "SAS3", 8, 0.5, "T-1304", "", ""),
+    ("T-1306", "ST-1302", "Study SAS standards + a packaged G1 model", "SAS3", 8, 1.0, "T-1304", "", ""),
+    ("T-1307", "ST-1302", "Shadow a G1 reconciliation cycle", "SAS3", 8, 1.0, "T-0810", "", ""),
 ]
 
 # ---------- Group 2 per-model tasks (generated) ----------
+# 3 SAS devs run 3 models/sprint in S9-S10 and the final 2 in S11.
+# ALL 10 models live by end S11; S12 is hardening + sign-off only.
 # model -> (sprint, sas_role, wave_story)
 G2_MODELS = [
     (3, 9, "SAS", "ST-1002"),
     (4, 9, "SAS2", "ST-1002"),
-    (5, 10, "SAS", "ST-1003"),
-    (6, 10, "SAS2", "ST-1003"),
-    (7, 11, "SAS", "ST-1004"),
-    (8, 11, "SAS2", "ST-1004"),
-    (9, 12, "SAS", "ST-1005"),
-    (10, 12, "SAS2", "ST-1005"),
+    (5, 9, "SAS3", "ST-1002"),
+    (6, 10, "SAS", "ST-1003"),
+    (7, 10, "SAS2", "ST-1003"),
+    (8, 10, "SAS3", "ST-1003"),
+    (9, 11, "SAS", "ST-1004"),
+    (10, 11, "SAS2", "ST-1004"),
 ]
 # (suffix, title, role_key, est)  role_key "SASX" -> the model's sas owner
 G2_TEMPLATE = [
@@ -453,28 +474,40 @@ for _m, _sprint, _sas, _story in G2_MODELS:
         _role = _sas if _rk == "SASX" else _rk
         TASKS.append(
             (f"T-M{_m:02d}-{_suf}", _story, f"Model {_m}: {_title}", _role, _sprint, _est,
-             "T-1001", "", f"Group 2 wave; SAS owner {_sas}")
+             "T-1001", "", f"Group 2; SAS owner {_sas}")
         )
+# S11: 3rd SAS dev floats on reconciliation depth + defect cleanup across the wave
+TASKS.append(
+    ("T-M-FLOAT", "ST-1004", "Reconciliation depth + defect sweep across wave 3", "SAS3", 11, 4.0,
+     "T-M09-OPT,T-M10-OPT", "", "Spare SAS capacity = defect buffer")
+)
 # Per-wave TL governance checkpoint
-for _wave_sprint, _wave_story in [(9, "ST-1002"), (10, "ST-1003"), (11, "ST-1004"), (12, "ST-1005")]:
+for _wave_sprint, _wave_story in [(9, "ST-1002"), (10, "ST-1003"), (11, "ST-1004")]:
     TASKS.append(
         (f"T-W{_wave_sprint}", _wave_story, f"Wave review + ABSA checkpoint (S{_wave_sprint})", "TL",
          _wave_sprint, 0.5, "", "", "")
     )
+# S12 hardening (NO new models) - the slack the 9-person team buys
+TASKS += [
+    ("T-1501", "ST-1005", "Final cross-model reconciliation sweep + tolerance sign-off", "SAS", 12, 3.0, "", "", ""),
+    ("T-1502", "ST-1005", "Group 2 defect closure + re-run verification", "SAS2", 12, 3.0, "", "", ""),
+    ("T-1503", "ST-1005", "Group 2 knowledge transfer + per-model runbooks", "SAS3", 12, 2.0, "", "", ""),
+    ("T-1504", "ST-1005", "Group 2 DQ + lineage evidence pack", "DE", 12, 1.5, "", "", ""),
+]
 
 # ---------- Per-Model Tracker data ----------
 # (model, group, sprints, sas_owner, cadence)
 MODELS = [
     ("Model 1", "Group 1", "S2-S8", "SAS", "TBD (ABSA)"),
-    ("Model 2", "Group 1", "S4-S8", "SAS", "TBD (ABSA)"),
+    ("Model 2", "Group 1", "S2-S8", "SAS2", "TBD (ABSA)"),
     ("Model 3", "Group 2 W1", "S9", "SAS", "TBD"),
     ("Model 4", "Group 2 W1", "S9", "SAS2", "TBD"),
-    ("Model 5", "Group 2 W2", "S10", "SAS", "TBD"),
-    ("Model 6", "Group 2 W2", "S10", "SAS2", "TBD"),
-    ("Model 7", "Group 2 W3", "S11", "SAS", "TBD"),
-    ("Model 8", "Group 2 W3", "S11", "SAS2", "TBD"),
-    ("Model 9", "Group 2 W4", "S12", "SAS", "TBD"),
-    ("Model 10", "Group 2 W4", "S12", "SAS2", "TBD"),
+    ("Model 5", "Group 2 W1", "S9", "SAS3", "TBD"),
+    ("Model 6", "Group 2 W2", "S10", "SAS", "TBD"),
+    ("Model 7", "Group 2 W2", "S10", "SAS2", "TBD"),
+    ("Model 8", "Group 2 W2", "S10", "SAS3", "TBD"),
+    ("Model 9", "Group 2 W3", "S11", "SAS", "TBD"),
+    ("Model 10", "Group 2 W3", "S11", "SAS2", "TBD"),
 ]
 MODEL_STAGES = ["Contract", "Review", "Optimize", "Package", "Deploy", "Reconcile", "PIR", "Sign-off"]
 
@@ -491,13 +524,14 @@ GOV_CHECKPOINTS = [
     ("Kickoff + SPOCs confirmed", 1, "TL", "Charter + SPOCs signed"),
     ("Jenkins cutover (GHA retired)", 3, "DevOps", "Jenkins sole CI gate; branch protection flipped"),
     ("Registry live in dev", 4, "AWS", "SigV4 register smoke green"),
-    ("S5 CAPACITY REVIEW (scale-up gate)", 5, "TL", "Go/no-go on 2nd SAS dev for Group 2"),
+    ("S5 CAPACITY REVIEW (confirm 3rd SAS + AWS ramp-down)", 5, "TL", "Confirm SAS3 onboarding S8; plan AWS redeploy after S7"),
     ("Dress rehearsal pass", 6, "TL", "Full chain on real AWS, models 1-2"),
     ("G1 production readiness (go/no-go)", 8, "DevOps", "Readiness checklist + cutover rehearsal clean"),
     ("GROUP 1 ABSA SIGN-OFF", 8, "ABSA Risk", "Written sign-off; PIR + audit pack accepted"),
     ("Steering checkpoint (mid-program)", 6, "TL", "Status + risk review with ABSA + EXL sponsors"),
+    ("ALL 10 MODELS LIVE (Group 2 onboarding complete)", 11, "TL", "Models 3-10 scoring; S12 reserved for hardening"),
     ("Steering checkpoint (pre-go-live)", 11, "TL", "Go-live readiness review"),
-    ("GROUP 2 SIGN-OFF + go-live", 12, "ABSA Risk", "All 10 models live; steady-state begins"),
+    ("GROUP 2 SIGN-OFF + go-live", 12, "ABSA Risk", "All 10 models signed off; steady-state begins"),
 ]
 
 # ---------- RAID ----------
@@ -511,17 +545,17 @@ RAID = [
     ("Dependency", "DEP-06", "CAB / IVU API contract", "ABSA", "T-0701 (S5)", "Open - change workflow manual"),
     ("Dependency", "DEP-07", "Network connectivity choice (peering/TGW/PrivateLink)", "ABSA", "T-0307 (S3)", "Open - data plane blocked"),
     ("Dependency", "DEP-08", "Approved model docs + code + benchmarks (1-2 first)", "ABSA", "T-0403/0505 (S2)", "Open - SAS + DE model work blocked"),
-    ("Risk", "RISK-01", "ABSA account onboarding delayed past S2", "TL", "High / High", "Pre-stage TF + tfvars; LocalStack keeps CI green; escalate by end S1"),
-    ("Risk", "RISK-02", "One SAS dev insufficient for Group 2 (8 models)", "TL", "High / High", "S5 capacity review authorizes SAS2 onboarded S8; this plan assumes approval"),
-    ("Risk", "RISK-03", "Group 1 sign-off (S8) slips, cascades to Group 2", "ABSA Risk", "Med / High", "Dress rehearsal S6 de-risks; defect buffer in S7-S8"),
-    ("Risk", "RISK-04", "Compute platform choice (D04) blocks S5 build", "TL", "Med / High", "Decision required end S3 at architecture board"),
-    ("Risk", "RISK-05", "Benchmark reconciliation discrepancies force rewrite", "SAS", "Med / High", "Incremental validation; per-variable delta report; tolerance bands agreed early"),
-    ("Risk", "RISK-06", "2nd SAS dev not sourced in time for S9", "TL", "Med / High", "Start sourcing S6 on approval; fallback = extend Group 2 across more sprints"),
-    ("Risk", "RISK-07", "Signature byte-equivalence fails GHA vs Jenkins", "DevOps", "Low / High", "S3 parallel-run week compares digests before cutover"),
-    ("Assumption", "ASM-01", "2nd SAS dev approved at S5 review and productive by S9", "TL", "S5/S9", "If declined: Group 2 extends ~4 sprints (go-live ~late Jan 2027)"),
-    ("Assumption", "ASM-02", "10 models fit standard-batch / scalable-batch templates", "TL", "S6+", "Realtime tier is a placeholder; a realtime model would add scope"),
-    ("Assumption", "ASM-03", "ABSA benchmarks are deterministic + reproducible", "SAS", "S4+", "Required for tolerance-band reconciliation to be meaningful"),
-    ("Assumption", "ASM-04", "Engineers full-time on this program from S1", "TL", "All", "Capacity model assumes 8 d/sprint (6 for TL)"),
+    ("Risk", "RISK-01", "ABSA account onboarding delayed past S2", "TL", "High / Med", "3 AWS engineers absorb a slip better than 1; pre-stage TF + tfvars; LocalStack keeps CI green; escalate end S1"),
+    ("Risk", "RISK-02", "Group 1 sign-off (S8) slips, cascades to Group 2", "ABSA Risk", "Med / High", "Models 1-2 run in PARALLEL (2 SAS) from S2; dress rehearsal S6; defect buffer S7-S8"),
+    ("Risk", "RISK-03", "Compute platform choice (D04) blocks S5 build", "TL", "Med / Med", "Decision required end S3 at architecture board; AWS3 owns it"),
+    ("Risk", "RISK-04", "Benchmark reconciliation discrepancies force rewrite", "SAS", "Med / High", "Incremental validation; per-variable delta report; tolerance bands agreed early; S11 float + S12 hardening absorb rework"),
+    ("Risk", "RISK-05", "3rd SAS dev not sourced in time for S8 onboarding", "TL", "Med / Med", "Start sourcing S6; 2 SAS from S1 already cover Group 2 at ~2 models/sprint as fallback (S9-S12)"),
+    ("Risk", "RISK-06", "Signature byte-equivalence fails GHA vs Jenkins", "DevOps", "Low / High", "S3 parallel-run week compares digests before cutover"),
+    ("Risk", "RISK-07", "DevOps single-person peaks (S2 7.0, S6 6.5) - no DevOps redundancy", "TL", "Med / Med", "TL pairs on Jenkins/dashboards at peaks; only un-doubled role - watch at S2/S6"),
+    ("Assumption", "ASM-01", "9-person team funded from S1 (3 AWS, 3 SAS [1 from S8], DE, DevOps, TL)", "TL", "All", "Max-coverage shape chosen to make 12 sprints solid with absorption buffer"),
+    ("Assumption", "ASM-02", "AWS2/AWS3 redeploy or ramp down after S7 once foundation is built", "TL", "S8+", "Foundation is front-loaded; AWS load drops sharply S8-S12 (cost lever)"),
+    ("Assumption", "ASM-03", "All 10 models fit standard-batch / scalable-batch templates", "TL", "S6+", "Realtime tier is a placeholder; a realtime model would add scope"),
+    ("Assumption", "ASM-04", "ABSA benchmarks are deterministic + reproducible", "SAS", "S4+", "Required for tolerance-band reconciliation to be meaningful"),
     ("Issue", "ISS-00", "(none logged yet - populate during delivery)", "TL", "-", "-"),
 ]
 
@@ -582,28 +616,37 @@ def build_readme(wb):
     lines = [
         "",
         "Anchoring: Sprint 1 = Mon 2026-06-15. 12 sprints x 2 weeks ~ 6 months.",
-        "Group 1 ABSA sign-off targeted end of Sprint 8 (2026-10-02). Group 2 sign-off + go-live end S12 (~2026-11-27, steady-state ~Dec 1).",
+        "Group 1 ABSA sign-off targeted end of Sprint 8 (2026-10-02). All 10 models live by end S11; Group 2 sign-off + go-live end S12.",
         "",
-        "CAPACITY & SCALE-UP DECISION (locked):",
-        "  Keep 12 sprints. At the ~2-month mark (Sprint 5, ~Aug 10-21) hold a formal capacity review (task T-1301).",
-        "  If approved, a 2nd SAS developer (role SAS2) is sourced from S6, onboarded in S8, and runs Group 2",
-        "  alongside the first SAS dev from S9 (each owns 1 model/sprint at ~6 effort-days).",
-        "  This plan is built ASSUMING approval. FALLBACK if declined: Group 2 extends across ~4 more sprints",
-        "  (one SAS dev at ~1.3 models/sprint), pushing go-live to ~late Jan 2027 (see RAID ASM-01).",
+        "TEAM SHAPE - MAX COVERAGE (chosen to make 12 sprints solid):",
+        "  9 people. Two roles doubled/tripled so no single track runs at the ragged edge:",
+        "  - 3 AWS/MLOps engineers split the foundation crunch into 3 streams (each lands <=6 d/sprint).",
+        "  - 3 SAS developers: two from S1 run Group 1 models 1 & 2 IN PARALLEL (kills bus-factor-of-one on",
+        "    the proof); a third onboards S8 for Group 2.",
+        "  Group 2 (8 models) is compressed into S9-S11 (3 models/sprint, then 2) so ALL 10 are live by end S11,",
+        "  leaving S12 entirely for hardening, sign-off, and handover - not a race to finish models.",
+        "  The S5 capacity review (T-1301) now confirms the 3rd SAS dev + plans AWS ramp-down after foundation.",
         "",
         "Team & capacity (effort-days per 2-week sprint = 10 working days x 0.8 focus factor):",
-        "  AWS    - AWS / MLOps Engineer        - 8.0 d/sprint",
-        "  DE     - Data Engineer               - 8.0 d/sprint",
-        "  SAS    - SAS Developer               - 8.0 d/sprint",
-        "  SAS2   - SAS Developer #2            - 8.0 d/sprint FROM SPRINT 8 (0 before; pending S5 review)",
-        "  DevOps - DevOps Engineer             - 8.0 d/sprint",
-        "  TL     - Tech Lead (Vishnu)          - 6.0 d/sprint (splits with program management)",
+        "  AWS    - AWS/MLOps Eng #1 (Foundation/Infra)   - 8.0 d/sprint",
+        "  AWS2   - AWS/MLOps Eng #2 (Platform Services)   - 8.0 d/sprint",
+        "  AWS3   - AWS/MLOps Eng #3 (Compute/MLOps)       - 8.0 d/sprint",
+        "  DE     - Data Engineer                          - 8.0 d/sprint",
+        "  SAS    - SAS Developer #1 (Model 1 / Group 2)   - 8.0 d/sprint",
+        "  SAS2   - SAS Developer #2 (Model 2 / Group 2)   - 8.0 d/sprint",
+        "  SAS3   - SAS Developer #3 (Group 2)             - 8.0 d/sprint FROM SPRINT 8 (0 before)",
+        "  DevOps - DevOps Engineer                        - 8.0 d/sprint",
+        "  TL     - Tech Lead (Vishnu)                     - 6.0 d/sprint (splits with program management)",
+        "",
+        "  COST LEVER: AWS2/AWS3 are heavily loaded S1-S7 (foundation) then drop sharply. After S7 they can",
+        "  ramp down or redeploy to MLOps/optimization work - planned at the S5 review (RAID ASM-02).",
+        "  Only DevOps is un-doubled; watch its S2 (7.0) and S6 (6.5) peaks (RAID RISK-07).",
         "",
         "How to use:",
         "  1. 'Backlog' is the source of truth: EPIC -> Story -> Task with role, sprint, estimate, points, MoSCoW.",
-        "     Import into Jira (CSV) or mirror manually; Sprint 1-8 task IDs are stable (the kickoff briefs cite them).",
-        "  2. 'Sprint Plan' = goal + milestone per sprint + per-role load (formula-driven).",
-        "  3. 'Role Load' = capacity heat grid. Grey = off-team (SAS2 pre-S8). Red = overloaded (must re-plan).",
+        "     Import into Jira (CSV) or mirror manually; Sprint 1-8 base task IDs are stable.",
+        "  2. 'Sprint Plan' = goal + milestone per sprint + per-role load (formula-driven), 9 role columns.",
+        "  3. 'Role Load' = capacity heat grid. Grey = off-team (SAS3 pre-S8). Red = overloaded (must re-plan).",
         "  4. 'Per-Model Tracker' = the 10 models x onboarding stages; the heart of the program.",
         "  5. 'Governance & Cadence' = ceremonies + decision/sign-off checkpoints with target sprints.",
         "  6. 'RAID Log' = risks, assumptions, issues, dependencies (incl. the 8 ABSA dependencies).",
@@ -778,8 +821,9 @@ def build_role_load(wb):
         ws.cell(row=row, column=1 + n).font = Font(name="Arial", size=8, color="808080")
     row += 2
     legend = ("Green = loaded within capacity | Yellow = near cap (<=1d slack) | "
-              "Red = over capacity (re-plan) | Grey = off-team (SAS2 before S8) | Light = idle. "
-              "Fills reflect the committed plan; values recalc live via SUMIFS.")
+              "Red = over capacity (re-plan) | Grey = off-team (SAS3 before S8) | Light = idle. "
+              "Fills reflect the committed plan; values recalc live via SUMIFS. "
+              "AWS2/AWS3 idle late = redeploy lever (see README).")
     ws.cell(row=row, column=1, value=legend).font = FONT_BODY
 
     _widths(ws, {"A": 30})
