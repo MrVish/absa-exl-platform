@@ -312,6 +312,9 @@ def gen_readme() -> str:
         seat_label = ", ".join(seats)
         L.append(f"| [{g['title']}]({g['file']}) | {seat_label} | {s1:.1f} d |")
     L.append("")
+    L.append("**Onboarding a new joiner?** See [skills-matrix.md](skills-matrix.md) - the per-role skillsets "
+             "(Core / Ramp-up / Bonus) needed to understand and contribute to this platform.")
+    L.append("")
     L.append("## Team at a glance")
     L.append("")
     L.append("| Seat | Role | On team from |")
