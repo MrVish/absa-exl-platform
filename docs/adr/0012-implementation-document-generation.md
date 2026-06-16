@@ -50,6 +50,16 @@ A structured `implementation.md` (rendered to PDF for sign-off):
    differs from the dev doc, each with justification.
 8. **Change log** — version history (the "living" dimension).
 
+> **As built (2026-06-16):** the generator renders an **exhaustive default of 25
+> narrative sections + 3 appendices** (full file inventory with digests,
+> source-artefact provenance, and the parsed development-document outline) that
+> cover the eight themes above plus intended use, feature engineering, data
+> quality, environment & dependencies, code inventory, monitoring, security,
+> rollback/DR, and open items. The section set is **data-driven**
+> (`SECTION_SPECS` + `FACT_RENDERERS` in `document.py`) and is the **platform
+> default, pending alignment with ABSA's agreed implementation-document
+> structure** — replacing/extending it is a localised edit, not a rewrite.
+
 ### How it is generated — facts are grounded, narrative is drafted
 
 - The IDG assembles a **deterministic context bundle** from artefacts the
@@ -76,6 +86,23 @@ A structured `implementation.md` (rendered to PDF for sign-off):
   *data* is not sent — only the *code* that processes it and the *documentation*
   about it. A pre-flight checker fails the run if the bundle contains anything
   resembling a data payload.
+
+### Handling large development documents (PDF/DOCX, ~100 pages)
+
+ABSA's development document can be **~100 pages** and is typically a **PDF or
+Word** file, not markdown. The IDG ingests `.pdf` (via `pypdf`) and `.docx` (via
+`python-docx`), offered as optional extras, alongside markdown/text, and parses
+the document into a **section outline** (`docparse.py`). Because a 100-page
+document rarely fits a single LLM context window — and sending it whole is
+wasteful — the IDG applies **section-aware budgeting**: whole sections are kept
+in order up to a configurable character budget (`--dev-doc-max-chars`, default
+200k), and any trailing sections that don't fit are listed by heading with an
+explicit truncation marker, so the LLM **never silently receives a clipped
+document**. The full document remains the source of record; the parsed outline,
+source format, page/char counts, and truncation status are recorded as **facts**
+in the rendered document (Appendix C) and in provenance. Drafting each section
+against only its relevant dev-doc sections, for richer grounding on very large
+documents, is a planned enhancement (open question 4).
 
 ### Governance — human-in-the-loop + provenance
 
@@ -155,3 +182,11 @@ is recorded at registration.
 2. **Data-processing terms** — ABSA-approved enterprise agreement (no retention /
    no training), region pinning, and the approved channel. Gates first real use.
 3. **PDF rendering toolchain** in the EXL CI/runtime (markdown → PDF).
+4. **Per-section drafting for very large inputs** — the adapter currently drafts
+   all sections in one call (correct for the offline provider and typical docs).
+   For very large dev docs combined with the exhaustive structure, draft
+   section-by-section (each grounded on only its relevant dev-doc sections) to
+   improve grounding and stay within model output limits.
+5. **Confirm the implementation-document structure with ABSA.** The 25-section
+   default is exhaustive but provisional; ABSA will supply the agreed outline (as
+   they will for the development document), which then replaces `SECTION_SPECS`.

@@ -18,6 +18,7 @@ from typing import Any
 
 import yaml
 
+from .docparse import budget_dev_doc, load_dev_doc
 from .errors import BundleError
 
 # Content kinds the LLM may receive. Everything else is rejected by the guard.
@@ -63,6 +64,11 @@ class ContextBundle:
     file_inventory: list[FileRef] = field(default_factory=list)
     content_files: list[ContentFile] = field(default_factory=list)
     dev_doc_present: bool = False
+    dev_doc_format: str | None = None
+    dev_doc_pages: int | None = None
+    dev_doc_chars: int = 0
+    dev_doc_section_titles: list[str] = field(default_factory=list)
+    dev_doc_truncated: bool = False
 
     def input_digests(self) -> dict[str, str]:
         """Digests of the artefacts that grounded this bundle (for provenance)."""
@@ -128,6 +134,7 @@ def build_context_bundle(
     *,
     pipeline_manifest: Path | None = None,
     dev_doc: Path | None = None,
+    dev_doc_max_chars: int = 200_000,
 ) -> ContextBundle:
     """Build the context bundle for the package at ``package_dir``.
 
@@ -182,15 +189,23 @@ def build_context_bundle(
         )
 
     dev_doc_present = False
+    dev_doc_format: str | None = None
+    dev_doc_pages: int | None = None
+    dev_doc_chars = 0
+    dev_doc_section_titles: list[str] = []
+    dev_doc_truncated = False
     if dev_doc is not None:
-        if not dev_doc.is_file():
-            raise BundleError(f"dev doc not found: {dev_doc}")
-        content.append(
-            ContentFile(
-                path=dev_doc.name, kind=KIND_DEV_DOC, text=dev_doc.read_text(encoding="utf-8")
-            )
-        )
+        # Parse PDF / DOCX / MD / TXT, structure into sections, and budget the
+        # text sent to the LLM (a ~100-page dev doc rarely fits a context window).
+        doc = load_dev_doc(dev_doc)
+        budget = budget_dev_doc(doc, dev_doc_max_chars)
+        content.append(ContentFile(path=dev_doc.name, kind=KIND_DEV_DOC, text=budget.text))
         dev_doc_present = True
+        dev_doc_format = doc.source_format
+        dev_doc_pages = doc.page_count
+        dev_doc_chars = doc.char_count
+        dev_doc_section_titles = [s.title for s in doc.sections]
+        dev_doc_truncated = budget.truncated
 
     return ContextBundle(
         model_name=model_name,
@@ -205,4 +220,9 @@ def build_context_bundle(
         file_inventory=inventory,
         content_files=content,
         dev_doc_present=dev_doc_present,
+        dev_doc_format=dev_doc_format,
+        dev_doc_pages=dev_doc_pages,
+        dev_doc_chars=dev_doc_chars,
+        dev_doc_section_titles=dev_doc_section_titles,
+        dev_doc_truncated=dev_doc_truncated,
     )

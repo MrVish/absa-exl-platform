@@ -120,9 +120,12 @@ class AnthropicProvider:
             ) from e
 
         client: Any = anthropic.Anthropic(api_key=api_key)
+        # The exhaustive default structure is ~25 sections; allow ample output.
+        # (For very large outputs, drafting per-section in batches is a planned
+        # enhancement — see ADR-0012 open questions.)
         msg: Any = client.messages.create(
             model=model,
-            max_tokens=4096,
+            max_tokens=16384,
             messages=[{"role": "user", "content": _build_prompt(system, context, sections)}],
         )
         return _parse_sections(msg.content[0].text, sections)

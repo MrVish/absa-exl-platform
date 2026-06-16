@@ -8,12 +8,16 @@ dependencies = [
     "pyyaml>=6",
 ]
 
-# Cloud LLM SDKs are optional extras — the default 'offline' provider needs
-# neither, so the component installs + tests without network or API keys.
-# Install an extra only on the runtime that calls the real provider.
+# Optional extras. The default 'offline' provider + markdown/text dev docs need
+# none of these, so the component installs + tests without network, API keys, or
+# document parsers. Install an extra only on the runtime that needs it:
+#   azure/anthropic — the real LLM providers
+#   pdf/docx        — ingesting a PDF / Word development document (docparse.py)
 [project.optional-dependencies]
 azure = ["openai>=1.40"]
 anthropic = ["anthropic>=0.34"]
+pdf = ["pypdf>=4"]
+docx = ["python-docx>=1.1"]
 
 [project.scripts]
 generate-impl-doc = "impl_doc_generator.cli:main"

@@ -45,7 +45,15 @@ from .providers import get_provider
     "dev_doc",
     default=None,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="ABSA model development document (markdown / text)",
+    help="ABSA development document: .md/.txt, or .pdf/.docx (extras: pdf, docx)",
+)
+@click.option(
+    "--dev-doc-max-chars",
+    "dev_doc_max_chars",
+    default=200_000,
+    show_default=True,
+    type=int,
+    help="Budget for dev-doc text sent to the LLM; larger docs are section-truncated",
 )
 @click.option(
     "--provider",
@@ -76,9 +84,15 @@ def main(
     out: Path | None,
     approver: str | None,
     generated_at: str | None,
+    dev_doc_max_chars: int,
 ) -> None:
     try:
-        bundle = build_context_bundle(package, pipeline_manifest=pipeline, dev_doc=dev_doc)
+        bundle = build_context_bundle(
+            package,
+            pipeline_manifest=pipeline,
+            dev_doc=dev_doc,
+            dev_doc_max_chars=dev_doc_max_chars,
+        )
         guard_bundle(bundle)  # hard rule: code + docs + metadata only, never raw data
         provider = get_provider(provider_name)
         ts = generated_at or _dt.datetime.now(_dt.UTC).isoformat()
