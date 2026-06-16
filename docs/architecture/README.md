@@ -2,7 +2,7 @@
 
 AWS architecture diagrams for the ABSA × EXL Model Hosting platform, rendered
 with the [`diagrams`](https://diagrams.mingrammer.com/) library (graphviz
-backend). Five focused sections rather than one unreadable mega-diagram.
+backend). Six focused sections rather than one unreadable mega-diagram.
 
 **Regenerate:** `uv run --with diagrams python scripts/build_aws_diagrams.py`
 (requires graphviz `dot` on PATH). The script is the source of truth — edit it,
@@ -72,6 +72,31 @@ pipelines (python-validate, code-intake, terraform-validate, localstack-demo,
 pipeline-factory) run; the AWS-touching `pipeline-factory` job authenticates
 via IRSA / assume-role to `kms:Sign` and SigV4-register. Commit statuses flow
 back to GitHub branch protection.
+
+## 6. S3 Storage Layout — Buckets, Prefixes & Properties
+![S3 storage layout](06-s3-storage-layout.png)
+
+How artifacts are stored in each EXL env account once they land (ADR-0001,
+ADR-0009, ADR-0010). Four built buckets, each scoped to one artifact kind:
+
+- **`exl-model-landing-{env}`** — the replication target for ABSA's model-ready
+  data (`model-ready/<…>/data.parquet` + sidecar `manifest.json`). Object-lock
+  COMPLIANCE (7y prod / 1y dev), versioned, SSE-KMS with the per-env destination
+  CMK, public access blocked, 15-min RTC SLA. **Raw PII never crosses** — only
+  model-ready data does.
+- **`exl-signed-manifests-{env}`** — the chain-of-custody anchor, keyed by
+  subject type: `packages/<name>/<ver>/manifest.json` and
+  `pipelines/<name>/<ver>/manifest.json`. Versioned, SSE-AES256,
+  `prevent_destroy`; ABSA verifier principals get cross-account read.
+- **`exl-public-keys-{env}`** — signing public keys at
+  `manifest-signing/<key_id>/<ver>.pem`; the one bucket with scoped public read
+  (TLS-only) so anyone can verify a signature offline.
+- **`exl-{env}-cloudtrail-<account_id>`** — the audit log store.
+
+Two clarifications the diagram makes explicit: the **registry is DynamoDB, not
+S3** (it stores records that *reference* the S3 manifest digests); and the
+**scoring runtime I/O** prefixes plus the IDG `implementation.md` location are
+**planned** (scoring engine + ADR-0012), not yet built.
 
 ---
 
