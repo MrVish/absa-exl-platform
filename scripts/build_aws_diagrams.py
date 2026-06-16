@@ -1,12 +1,14 @@
 """Render AWS architecture diagrams for the ABSA x EXL Model Hosting platform.
 
-Uses the `diagrams` library (graphviz backend). Produces 4 focused section
+Uses the `diagrams` library (graphviz backend). Produces focused section
 diagrams as PNGs under docs/architecture/ rather than one unreadable mega-diagram:
 
   01-platform-overview   - cross-account topology + both tracks + security baseline
   02-track-a-onboarding  - Code Intake -> Sign -> Register -> Pipeline Factory
   03-track-b-scoring     - scheduled scoring -> compute -> DQ -> sign -> deliver
   04-chain-of-custody    - KMS asymmetric signing + cross-account verification
+  05-cicd-jenkins        - Jenkins CI migration (ADR-0011)
+  06-s3-storage-layout   - EXL S3 buckets, prefixes, properties + replication
 
 Run: `uv run --with diagrams python scripts/build_aws_diagrams.py`
 Requires graphviz `dot` on PATH.
@@ -279,12 +281,102 @@ def cicd():
         pf >> Edge(color=HTTP, label="SigV4 register") >> reg
 
 
+def s3_storage_layout():
+    with Diagram(
+        "EXL S3 Storage Layout - Buckets, Prefixes & Properties (per env)",
+        filename=str(OUT / "06-s3-storage-layout"),
+        outformat="png",
+        show=False,
+        direction="LR",
+        graph_attr=GRAPH_ATTR,
+    ):
+        with Cluster("ABSA (source account)", graph_attr=ABSA):
+            absa_cmk = KMS("Source CMK\n(per-env)")
+            handoff = S3(
+                "absa-model-handoff-{env}\n"
+                "model-ready/...  (data.parquet + sidecar manifest.json)\n"
+                "object-lock COMPLIANCE - versioned - SSE-KMS"
+            )
+            absa_verify = IAMRole("ABSA verifier\nprincipal")
+
+        with Cluster("EXL AWS - exl-{env} account (eu-west-1)", graph_attr=EXL):
+            producers = Lambda("Producers\n(Code Intake /\nPipeline Factory /\nManifest Signer)")
+
+            with Cluster("KMS (per-env CMKs)", graph_attr=SECC):
+                dest_cmk = KMS("Destination CMK\n(landing bucket)")
+
+            with Cluster("1. Model-ready DATA (replication target)", graph_attr=SCORE):
+                landing = S3(
+                    "exl-model-landing-{env}\n"
+                    "model-ready/<...>/data.parquet + manifest.json\n"
+                    "object-lock COMPLIANCE 7y prod / 1y dev\n"
+                    "versioned - SSE-KMS (dest CMK) - public access blocked\n"
+                    "replication RTC 15-min SLA"
+                )
+
+            with Cluster("2. Chain-of-custody MANIFESTS", graph_attr=DATAC):
+                signed = S3(
+                    "exl-signed-manifests-{env}\n"
+                    "packages/<name>/<ver>/manifest.json\n"
+                    "pipelines/<name>/<ver>/manifest.json\n"
+                    "versioned - SSE-AES256 - prevent_destroy"
+                )
+                impl = General(
+                    "(planned, ADR-0012)\n"
+                    "packages/<name>/<ver>/implementation.md\n"
+                    "+ approved PDF"
+                )
+
+            with Cluster("3. Verification material (PUBLIC KEYS)", graph_attr=SECC):
+                pub = S3(
+                    "exl-public-keys-{env}\n"
+                    "manifest-signing/<key_id>/<ver>.pem\n"
+                    "scoped public read (TLS) - versioned"
+                )
+
+            with Cluster("4. Audit log store", graph_attr=SECC):
+                trail = S3("exl-{env}-cloudtrail-<account_id>")
+                ct = Cloudtrail("CloudTrail")
+                ct >> Edge(color=DASH, style="dashed") >> trail
+
+            with Cluster("Registry (NOT S3 - DynamoDB)", graph_attr=DATAC):
+                reg_db = Dynamodb("Registry + audit\nrecords reference\nS3 manifest digests")
+
+            with Cluster("(planned) Scoring runtime I/O", graph_attr=SECC):
+                scoreio = S3("scoring inputs / outputs\n+ signed outputs\n(scoring engine)")
+
+        # --- encryption (KMS) ---
+        absa_cmk >> Edge(color=SEC, style="dashed", label="SSE-KMS") >> handoff
+        dest_cmk >> Edge(color=SEC, style="dashed", label="SSE-KMS") >> landing
+
+        # --- the "land in EXL" flow: cross-account replication ---
+        handoff >> Edge(
+            color=DATA, style="dashed", label="S3 replication\nmodel-ready/ only - re-encrypt KMS"
+        ) >> landing
+
+        # --- producers write manifests + publish keys ---
+        producers >> Edge(color=SEC, label="kms:Sign -> put manifest") >> signed
+        producers >> Edge(color=SEC, label="publish PEM") >> pub
+        signed >> Edge(color=GRAY, style="dashed", label="co-located (planned)") >> impl
+
+        # --- registry references the signed manifests by digest ---
+        signed >> Edge(color=DATA, style="dashed", label="digest ref") >> reg_db
+
+        # --- cross-account verification reads (ABSA) ---
+        signed >> Edge(color=SEC, style="dashed", label="cross-account read") >> absa_verify
+        pub >> Edge(color=SEC, style="dashed", label="s3:GetObject PEM") >> absa_verify
+
+        # --- planned scoring consumes model-ready data ---
+        landing >> Edge(color=GRAY, style="dashed", label="scoring reads (planned)") >> scoreio
+
+
 def main():
     overview()
     track_a()
     track_b()
     chain_of_custody()
     cicd()
+    s3_storage_layout()
     print("Wrote diagrams to", OUT)
     for p in sorted(OUT.glob("*.png")):
         print(" ", p.name, f"{p.stat().st_size // 1024} KB")

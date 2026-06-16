@@ -144,6 +144,10 @@ Everything that crosses is held to a controlled, auditable perimeter:
   every artefact EXL produces with only the published public key, never having
   to trust EXL's word, only the maths.
 
+For exactly how artifacts are laid out in EXL's S3 once they land — bucket names,
+key prefixes, encryption, object-lock, and what is *planned* vs *built* — see the
+[S3 storage-layout diagram](docs/architecture/06-s3-storage-layout.png) (§3.1).
+
 > Whether "model-ready, de-identified" data is fully outside POPIA scope is an
 > ABSA compliance determination, tracked separately — not asserted here.
 
@@ -224,7 +228,7 @@ models — all captured in the delivery plan (§8), most of it gated on ABSA inp
 
 ### 3.1 Diagrams
 
-Five rendered, regenerate-from-code diagrams in
+Six rendered, regenerate-from-code diagrams in
 **[docs/architecture/](docs/architecture/README.md)**:
 
 | Diagram | Shows |
@@ -234,6 +238,7 @@ Five rendered, regenerate-from-code diagrams in
 | [Track B — scoring](docs/architecture/03-track-b-scoring.png) | EventBridge → Step Functions → compute → DQ → sign → deliver |
 | [Chain of custody](docs/architecture/04-chain-of-custody.png) | KMS asymmetric signing + cross-account verification |
 | [CI/CD — Jenkins](docs/architecture/05-cicd-jenkins.png) | The ADR-0011 migration |
+| [S3 storage layout](docs/architecture/06-s3-storage-layout.png) | EXL S3 buckets, prefixes & properties once artifacts land |
 
 Written architecture: [docs/architecture.md](docs/architecture.md) ·
 End-to-end technical walkthrough: [docs/technical-overview.md](docs/technical-overview.md) ·
@@ -575,7 +580,7 @@ touches ~80% of the concepts. Demo runbook:
 - [CLAUDE_CODE_BRIEF.md](CLAUDE_CODE_BRIEF.md) — original engagement brief
 
 ### Architecture & decisions
-- [docs/architecture/](docs/architecture/README.md) — the 5 rendered diagrams
+- [docs/architecture/](docs/architecture/README.md) — the 6 rendered diagrams
 - [docs/architecture.md](docs/architecture.md) — written architecture
 - ADRs: [0001 data-movement](docs/adr/0001-data-movement-s3-replication.md) ·
   [0002 dual-module IaC](docs/adr/0002-cross-account-iac-dual-module-split.md) ·
