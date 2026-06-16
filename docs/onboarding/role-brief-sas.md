@@ -44,9 +44,9 @@ _Not yet on the team in Sprint 1 (joins later - see load table)._
 
 | Seat | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | Cap |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| SAS | 5.0 | 3.0 | 4.0 | 5.0 | - | 3.0 | 3.0 | 4.0 | 6.0 | 6.0 | 6.0 | 3.0 | 8 |
-| SAS2 | 2.5 | 0.5 | 5.0 | 4.0 | 3.0 | - | 3.0 | - | 6.0 | 6.0 | 6.0 | 3.0 | 8 |
-| SAS3 | - | - | - | - | - | - | - | 3.0 | 6.0 | 6.0 | 4.0 | 2.0 | 8 |
+| SAS | 5.0 | 3.0 | 4.0 | 5.0 | - | 3.0 | 3.0 | 4.5 | 6.5 | 6.5 | 6.5 | 3.0 | 8 |
+| SAS2 | 2.5 | 0.5 | 5.0 | 4.0 | 3.0 | - | 3.0 | 0.5 | 6.5 | 6.5 | 6.5 | 3.0 | 8 |
+| SAS3 | - | - | - | - | - | - | - | 3.0 | 6.5 | 6.5 | 4.0 | 2.0 | 8 |
 
 _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus factor. Loads sit below cap on purpose - the gap is ceremonies, review, and slack for the unknowns._
 
@@ -90,6 +90,8 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [SAS2] Defect triage + fix cycle (3.0d)
 
 **S8 (Sep 21-Oct 02)** - _GROUP 1 ABSA SIGN-OFF; pen-test remediation; 2nd SAS dev onboarded; G2 plan_
+- [SAS] Model-1 implementation doc: generate (IDG) + review + approve (0.5d)
+- [SAS2] Model-2 implementation doc: generate (IDG) + review + approve (0.5d)
 - [SAS] Defect closure + re-run + final reconciliation (2.0d)
 - [SAS] PIR evidence pack (reconciliation, DQ, audit trail) (2.0d)
 - [SAS3] Clone repo, uv sync, tests green (0.5d)
@@ -98,16 +100,19 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [SAS3] Shadow a G1 reconciliation cycle (1.0d)
 
 **S9 (Oct 05-Oct 16)** - _Group 2 wave 1 (models 3-5) live; dashboards validated with ABSA; cost dashboard_
+- [SAS] Model 3: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS] Model 3: profile + optimize + unit-test scoring code (2.5d)
 - [SAS] Model 3: PIR pack + sign-off prep (0.5d)
 - [SAS] Model 3: package per ADR-0010 + code-intake green (0.5d)
 - [SAS] Model 3: reconcile vs benchmark + defect fix (1.5d)
 - [SAS] Model 3: code review vs benchmark spec (1.0d)
+- [SAS2] Model 4: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS2] Model 4: profile + optimize + unit-test scoring code (2.5d)
 - [SAS2] Model 4: PIR pack + sign-off prep (0.5d)
 - [SAS2] Model 4: package per ADR-0010 + code-intake green (0.5d)
 - [SAS2] Model 4: reconcile vs benchmark + defect fix (1.5d)
 - [SAS2] Model 4: code review vs benchmark spec (1.0d)
+- [SAS3] Model 5: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS3] Model 5: profile + optimize + unit-test scoring code (2.5d)
 - [SAS3] Model 5: PIR pack + sign-off prep (0.5d)
 - [SAS3] Model 5: package per ADR-0010 + code-intake green (0.5d)
@@ -115,16 +120,19 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [SAS3] Model 5: code review vs benchmark spec (1.0d)
 
 **S10 (Oct 19-Oct 30)** - _Group 2 wave 2 (models 6-8) live; output delivery automated_
+- [SAS] Model 6: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS] Model 6: profile + optimize + unit-test scoring code (2.5d)
 - [SAS] Model 6: PIR pack + sign-off prep (0.5d)
 - [SAS] Model 6: package per ADR-0010 + code-intake green (0.5d)
 - [SAS] Model 6: reconcile vs benchmark + defect fix (1.5d)
 - [SAS] Model 6: code review vs benchmark spec (1.0d)
+- [SAS2] Model 7: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS2] Model 7: profile + optimize + unit-test scoring code (2.5d)
 - [SAS2] Model 7: PIR pack + sign-off prep (0.5d)
 - [SAS2] Model 7: package per ADR-0010 + code-intake green (0.5d)
 - [SAS2] Model 7: reconcile vs benchmark + defect fix (1.5d)
 - [SAS2] Model 7: code review vs benchmark spec (1.0d)
+- [SAS3] Model 8: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS3] Model 8: profile + optimize + unit-test scoring code (2.5d)
 - [SAS3] Model 8: PIR pack + sign-off prep (0.5d)
 - [SAS3] Model 8: package per ADR-0010 + code-intake green (0.5d)
@@ -133,11 +141,13 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 
 **S11 (Nov 02-Nov 13)** - _Group 2 wave 3 (models 9-10) live - ALL 10 MODELS SCORING; runbooks; DR verified_
 - [SAS3] Reconciliation depth + defect sweep across wave 3 (4.0d)
+- [SAS] Model 9: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS] Model 9: profile + optimize + unit-test scoring code (2.5d)
 - [SAS] Model 9: PIR pack + sign-off prep (0.5d)
 - [SAS] Model 9: package per ADR-0010 + code-intake green (0.5d)
 - [SAS] Model 9: reconcile vs benchmark + defect fix (1.5d)
 - [SAS] Model 9: code review vs benchmark spec (1.0d)
+- [SAS2] Model 10: implementation doc: generate (IDG) + approve (0.5d)
 - [SAS2] Model 10: profile + optimize + unit-test scoring code (2.5d)
 - [SAS2] Model 10: PIR pack + sign-off prep (0.5d)
 - [SAS2] Model 10: package per ADR-0010 + code-intake green (0.5d)

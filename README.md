@@ -21,6 +21,7 @@ models to production.
    - [1.2 The two tracks](#12-the-two-tracks)
    - [1.3 Model classes / pipeline tiers](#13-model-classes--pipeline-tiers)
    - [1.4 The PII / trust-boundary principle](#14-the-pii--trust-boundary-principle)
+   - [1.5 Implementation documentation (the "as-built" record)](#15-implementation-documentation-the-as-built-record)
 2. [Status at a glance](#2-status-at-a-glance)
 3. [Architecture](#3-architecture)
    - [3.1 Diagrams](#31-diagrams)
@@ -86,8 +87,13 @@ The platform supports two distinct, registry-linked flows.
 5. **Pipeline Factory** generates a scoring pipeline (Step Functions ASL +
    Terraform) for the model's class, cross-linking the upstream package by
    **digest**.
-6. The pipeline is **registered** (SigV4-authenticated) into the registry, which
-   gates promotion behind an approval state machine and writes an audit record.
+6. The **Implementation Document Generator** (LLM-assisted, [ADR-0012](docs/adr/0012-implementation-document-generation.md))
+   drafts the per-version **"as-built" implementation document** from the dev
+   doc + code + platform facts; a human reviews and approves it (see
+   [1.5](#15-implementation-documentation-the-as-built-record)).
+7. The pipeline is **registered** (SigV4-authenticated) into the registry, which
+   gates promotion behind an approval state machine, records the approved
+   `implementation_doc_ref`, and writes an audit record.
 
 **Track B — Scheduled Scoring & Delivery** *(recurring)*
 
@@ -140,6 +146,38 @@ Everything that crosses is held to a controlled, auditable perimeter:
 
 > Whether "model-ready, de-identified" data is fully outside POPIA scope is an
 > ABSA compliance determination, tracked separately — not asserted here.
+
+### 1.5 Implementation documentation (the "as-built" record)
+
+For every model version, the platform generates a living **Implementation
+Document** — the **"as-built" companion** to ABSA's "as-designed" model
+documentation. ABSA tells us *what the model is and how it was built*; this
+document records *how exactly EXL implemented it*: the optimizations made, the
+pipeline tier and schedule, the data lineage as wired, the reconciliation
+approach, the controls/evidence, and — critically — **every deviation from the
+development design, with rationale**.
+
+It is produced by the **Implementation Document Generator (IDG)** — an
+LLM-assisted, **human-approved** capability ([ADR-0012](docs/adr/0012-implementation-document-generation.md)):
+
+- **Facts are grounded, narrative is drafted.** Deterministic platform facts
+  (manifest, registry record, validation summary, digests, schedule) are injected
+  verbatim; an LLM (Azure OpenAI / Anthropic, behind a provider adapter) drafts
+  only the narrative. The two are visibly distinguished.
+- **Data-minimisation guard (hard rule):** the LLM receives **code + the dev
+  document + schemas + platform metadata only — never raw data rows or PII**
+  (consistent with §1.4 / ADR-0001).
+- **Human-in-the-loop:** the model's SAS owner + Tech Lead review and approve;
+  only an approved doc joins the record. Provenance (LLM provider + version,
+  input digests, approver) is recorded.
+- **Living + version-anchored:** one doc per model version, digest-referenced
+  from the registry record (`implementation_doc_ref`); re-versioning regenerates
+  it and captures the change-log diff.
+
+Why it matters: this *is* the **SR 11-7 / GMRMG model-implementation evidence**
+auditors expect, produced consistently as a by-product of onboarding. Build is
+tracked as **epic E14** in the delivery plan (§8); the generator is built
+~S6–S8 and a doc is produced + approved for every model from Group 1 onward.
 
 ---
 
@@ -231,6 +269,7 @@ only the endpoints and the boto3 session shape change.
 | Local / test | **LocalStack** CE 3.8.1, moto, Docker / docker-compose |
 | CI/CD | GitHub Actions (today) → **Jenkins** shared library / Groovy (ADR-0011, in migration) |
 | Compute (Track B) | Lambda container and/or SageMaker Processing (**D04** decides) |
+| LLM (IDG) | Azure OpenAI / Anthropic via a **provider adapter** (ADR-0012); code + docs + metadata only, never PII |
 
 ---
 
@@ -250,6 +289,7 @@ full suite runs on every PR.
 | [`pipelines/`](pipelines/) | Generated per-version pipeline artifacts | `credit-risk-pd/1.0.0/` (manifest, registration, terraform) | ✅ Example |
 | [`scoring-engine/`](scoring-engine/README.md) | Step Functions / Spark scorers (runtime execution) | — | ⏳ Placeholder (Bucket A) |
 | [`pir-engine/`](pir-engine/README.md) | Post-implementation-review reconciliation | — | ⏳ Placeholder (Phase 4) |
+| [`impl-doc-generator/`](impl-doc-generator/README.md) | Implementation Document Generator (IDG, ADR-0012) — LLM-assisted, human-approved per-version "as-built" doc | context bundler + provider adapter (Azure OpenAI / Anthropic) + raw-data/PII guard; CLI `generate-impl-doc` | ⏳ Planned (epic E14) |
 | [`terraform/`](terraform/) | All IaC | modules: landing-zone, s3-replication-{source,destination}, kms-hierarchy, iam-federation, pipeline-registry, signing-foundation; per-env stacks; account-bootstrap | ✅ Written/validated; apply pending |
 | [`infra/localstack/`](infra/localstack/) | LocalStack compose + terraform for the demo | `docker-compose.yml`, `terraform/` | ✅ Built |
 | [`ci/jenkins/`](ci/jenkins/README.md) | Jenkins shared library (`absa-ci`) + 5 example Jenkinsfiles | `vars/` steps (setupUv, awsLogin, publishStatus, postPrComment); `examples/*.Jenkinsfile` | 🟡 Scaffold (M1) |
@@ -405,6 +445,7 @@ all **Open**.
 | D07 | Single-region (eu-west-1) vs multi-region | ABSA Architect | KMS replica + signing-foundation scope |
 | D08 | Dashboard hosting — Grafana / CloudWatch / QuickSight | Program Mgr + ABSA Risk | Dashboard build (S8b) |
 | D09 | Output-delivery format — signed S3 / SFTP push / API pull | ABSA Architect + EXL Cloud | Delivery runbook + automation |
+| (ADR-0012) | Implementation-doc LLM provider — Azure OpenAI vs Anthropic + no-retention DPA + region | TL + ABSA Compliance | First real IDG run (S7) |
 | (ADR-0011) | Jenkins identity model — IRSA-on-EKS / instance profile / OIDC | DevOps + ABSA Cloud | Signing-foundation trust policy (M2) |
 
 ---
@@ -432,7 +473,10 @@ Control matrix (per-phase, with evidence pointers):
 
 The chain-of-custody design (§3.2), the append-only audit log, object-lock
 retention, and the per-account security baseline (CloudTrail / GuardDuty /
-Security Hub / CIS alarms) are the primary evidence-producing controls.
+Security Hub / CIS alarms) are the primary evidence-producing controls. The
+per-version **Implementation Document** (§1.5, ADR-0012) directly produces the
+**SR 11-7 / GMRMG model-implementation evidence** — the reviewed "as-built"
+record of how each model was put into production.
 
 ---
 
@@ -496,6 +540,7 @@ touches ~80% of the concepts. Demo runbook:
 | **ADR** | Architecture Decision Record (`docs/adr/`) |
 | **RAID** | Risks, Assumptions, Issues, Dependencies (a sheet in the agile plan) |
 | **MoSCoW** | Must / Should / Could / Won't prioritisation (on backlog stories) |
+| **Implementation Document / IDG** | The per-version "as-built" record of how EXL implemented a model, drafted by the LLM-assisted Implementation Document Generator and human-approved (ADR-0012) |
 | **DoR / DoD** | Definition of Ready / Definition of Done |
 | **SR 11-7 / POPIA / SARB GOI / GMRMG** | US model-risk guidance / SA data-protection law / SA Reserve Bank governance / ABSA Group Model Risk Mgmt Guideline |
 
@@ -523,7 +568,8 @@ touches ~80% of the concepts. Demo runbook:
   [0008 generator dual-mode](docs/adr/0008-generator-runtime-dual-mode.md) ·
   [0009 signing foundation](docs/adr/0009-signing-foundation-topology.md) ·
   [0010 package contract](docs/adr/0010-productized-package-contract.md) ·
-  [0011 CI → Jenkins](docs/adr/0011-ci-platform-jenkins.md)
+  [0011 CI → Jenkins](docs/adr/0011-ci-platform-jenkins.md) ·
+  [0012 implementation-doc generation](docs/adr/0012-implementation-document-generation.md)
 
 ### Delivery & planning
 - [docs/absa-exl-agile-plan.xlsx](docs/absa-exl-agile-plan.xlsx) — backlog + Sprint Plan + Role Load + RAID + Per-Model Tracker
