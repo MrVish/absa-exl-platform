@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["platform-contracts", "registry/api", "pipeline-factory", "manifest-signer", "code-intake"]
+members = ["platform-contracts", "registry/api", "pipeline-factory", "manifest-signer", "code-intake", "impl-doc-generator"]
 
 [dependency-groups]
 dev = [
@@ -24,6 +24,11 @@ target-version = "py312"
 extend-exclude = [
     "platform-contracts/src/platform_contracts/models.py",
     "code-intake/tests/fixtures/broken_python",
+    # Top-level scripts/ are one-off doc/plan generators (Excel, briefs, diagrams,
+    # the feasibility audit) - dev tooling with long data-table literals, not
+    # shipped product code. scripts/demo/ (the platform demo) IS linted, via the
+    # extend-include below; the single-* glob here does not cross into it.
+    "scripts/*.py",
 ]
 # scripts/demo/ is not a uv workspace member (spec §10.4) so include it
 # explicitly so `ruff check <subdir>` and editor integrations cover it.
@@ -51,6 +56,7 @@ files = [
     "pipeline-factory/src",
     "manifest-signer/src",
     "code-intake/src",
+    "impl-doc-generator/src",
     "scripts/demo",
 ]
 

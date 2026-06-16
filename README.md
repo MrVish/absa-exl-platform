@@ -175,9 +175,16 @@ LLM-assisted, **human-approved** capability ([ADR-0012](docs/adr/0012-implementa
   it and captures the change-log diff.
 
 Why it matters: this *is* the **SR 11-7 / GMRMG model-implementation evidence**
-auditors expect, produced consistently as a by-product of onboarding. Build is
-tracked as **epic E14** in the delivery plan (§8); the generator is built
-~S6–S8 and a doc is produced + approved for every model from Group 1 onward.
+auditors expect, produced consistently as a by-product of onboarding.
+
+**Status: the generator is built** (`impl-doc-generator/`, [README](impl-doc-generator/README.md)) —
+`build_context_bundle → guard → provider.draft → render_document`, CLI
+`generate-impl-doc`. A deterministic **`offline`** provider runs in CI today
+(no network/keys); the **Azure OpenAI / Anthropic** adapters are lazy-loaded and
+activate once the data-processing agreement (RAID DEP-09) lands. See the
+[worked example for `credit-risk-pd@1.0.0`](impl-doc-generator/examples/implementation-credit-risk-pd-1.0.0.md).
+Per-model rollout across Group 1/2 + the `implementation_doc_ref` schema wiring
+remain **epic E14** in the delivery plan (§8).
 
 ---
 
@@ -190,6 +197,7 @@ tracked as **epic E14** in the delivery plan (§8); the generator is built
 | Terraform (modules + per-env stacks) | ✅ **Written + validated** | ⏳ Not yet applied to real AWS (needs ABSA account IDs) |
 | Scoring runtime (Step Functions execution) | ⏳ **Templates render; runtime not built** | `scoring-engine/` is a placeholder |
 | PIR reconciliation engine | ⏳ **Not built** | `pir-engine/` is a placeholder (Phase 4) |
+| Implementation Document Generator (IDG) | ✅ **Built (offline)** | `impl-doc-generator/`; offline provider + worked example; cloud LLM adapters pending DPA |
 | CI on Jenkins (ADR-0011) | 🟡 **Scaffold done (M1)** | Shared library + 5 example Jenkinsfiles; cutover (M2/M3) pending |
 | Real-AWS deployment | ⏳ **Pending** | Blocked on ABSA inputs — see §7 |
 | 10-model onboarding | ⏳ **Pending** | The substance of the 12-sprint plan — see §8 |
@@ -289,7 +297,7 @@ full suite runs on every PR.
 | [`pipelines/`](pipelines/) | Generated per-version pipeline artifacts | `credit-risk-pd/1.0.0/` (manifest, registration, terraform) | ✅ Example |
 | [`scoring-engine/`](scoring-engine/README.md) | Step Functions / Spark scorers (runtime execution) | — | ⏳ Placeholder (Bucket A) |
 | [`pir-engine/`](pir-engine/README.md) | Post-implementation-review reconciliation | — | ⏳ Placeholder (Phase 4) |
-| [`impl-doc-generator/`](impl-doc-generator/README.md) | Implementation Document Generator (IDG, ADR-0012) — LLM-assisted, human-approved per-version "as-built" doc | context bundler + provider adapter (Azure OpenAI / Anthropic) + raw-data/PII guard; CLI `generate-impl-doc` | ⏳ Planned (epic E14) |
+| [`impl-doc-generator/`](impl-doc-generator/README.md) | Implementation Document Generator (IDG, ADR-0012) — LLM-assisted, human-approved per-version "as-built" doc | context bundler + provider adapter (offline / Azure OpenAI / Anthropic) + raw-data/PII guard; CLI `generate-impl-doc` | ✅ Built (offline; cloud adapters pending DPA) |
 | [`terraform/`](terraform/) | All IaC | modules: landing-zone, s3-replication-{source,destination}, kms-hierarchy, iam-federation, pipeline-registry, signing-foundation; per-env stacks; account-bootstrap | ✅ Written/validated; apply pending |
 | [`infra/localstack/`](infra/localstack/) | LocalStack compose + terraform for the demo | `docker-compose.yml`, `terraform/` | ✅ Built |
 | [`ci/jenkins/`](ci/jenkins/README.md) | Jenkins shared library (`absa-ci`) + 5 example Jenkinsfiles | `vars/` steps (setupUv, awsLogin, publishStatus, postPrComment); `examples/*.Jenkinsfile` | 🟡 Scaffold (M1) |

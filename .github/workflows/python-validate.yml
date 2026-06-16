@@ -6,6 +6,9 @@ on:
       - "platform-contracts/**"
       - "registry/**"
       - "pipeline-factory/**"
+      - "manifest-signer/**"
+      - "code-intake/**"
+      - "impl-doc-generator/**"
       - "pipelines/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -30,7 +33,7 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
       - name: Types
-        run: uv run mypy platform-contracts/src registry/api/src pipeline-factory/src
+        run: uv run mypy platform-contracts/src registry/api/src pipeline-factory/src manifest-signer/src code-intake/src impl-doc-generator/src
       - name: Tests
         run: uv run pytest -v --timeout=60 --timeout-method=thread
       - name: Contract model drift check
