@@ -26,7 +26,7 @@ Your Sprint 1 load: **4.5 effort-days** (cap 6).
 
 | Seat | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | Cap |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| TL | 4.5 | - | 1.0 | 2.5 | 4.0 | 4.0 | 2.5 | 5.5 | 0.5 | 0.5 | 2.5 | 5.5 | 6 |
+| TL | 4.5 | - | 1.0 | 2.5 | 4.5 | 5.5 | 4.5 | 5.5 | 0.5 | 0.5 | 2.5 | 5.5 | 6 |
 
 _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus factor. Loads sit below cap on purpose - the gap is ceremonies, review, and slack for the unknowns._
 
@@ -52,15 +52,18 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - Map CAB/IVU contract onto registry approve/retire routes (D02) (2.0d)
 - Integration test suite on real AWS (beyond LocalStack) (1.5d)
 - 2-month capacity & velocity review; confirm 3rd SAS dev + AWS ramp-down plan (0.5d)
+- ADR-0012 + confirm LLM provider DPA (Azure OpenAI / Anthropic) with ABSA (0.5d)
 
 **S6 (Aug 24-Sep 04)** - _DRESS REHEARSAL: full chain on real AWS for models 1-2; dashboards + perf harness; POPIA/SARB check_
 - POPIA/SARB control verification vs control-matrix (1.5d)
 - Dress rehearsal orchestration: full chain on real AWS, models 1-2 (2.0d)
 - Initiate 3rd SAS dev sourcing/transfer; plan AWS redeploy after S7 (0.5d)
+- Design impl-doc template + section schema + deterministic context-bundle spec (1.5d)
 
 **S7 (Sep 07-Sep 18)** - _Group 1 initial production scoring; reconciliation; perf + resilience tests; UAT plan_
 - Defect triage facilitation + ABSA comms (1.0d)
 - UAT plan + scripts with ABSA (1.5d)
+- LLM provider adapter (Azure OpenAI / Anthropic) + grounded prompt (2.0d)
 
 **S8 (Sep 21-Oct 02)** - _GROUP 1 ABSA SIGN-OFF; pen-test remediation; 2nd SAS dev onboarded; G2 plan_
 - Audit evidence pack assembly (G1) for ABSA risk + external audit (1.5d)
@@ -91,6 +94,7 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 | Dependency | First bites | What it is |
 |---|---|---|
 | ABSA: CAB/IVU contract | S5 | CAB / IVU API contract |
+| ABSA: LLM data-processing terms | S5 | ABSA: LLM data-processing terms |
 
 The Tech Lead sends the consolidated ABSA ask-list in Sprint 1 (T-0113) and chases weekly. If any of the above is unanswered approaching its sprint, raise it in standup.
 

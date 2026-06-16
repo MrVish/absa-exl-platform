@@ -80,6 +80,20 @@
 | **SOC 2 CC8.1 — change control (branch protection)** | GitHub branch protection on `main` requires named Jenkins commit-status contexts (`ci/python-validate`, `ci/pipeline-factory/sign`, `ci/pipeline-factory/register`, `ci/localstack-demo`, `ci/code-intake`, `ci/terraform-validate`) before merge | GitHub repo settings → branches → main → required status checks; cross-referenced in `ci/jenkins/README.md` | EXL Platform Engineering |
 | **SR 11-7 III.5 — independent verification (drift-gate commit-back)** | Jenkins drift-gate uses a GitHub App identity (preferred) or scoped bot PAT for the regenerated-manifest commit; identity is auditable per-action and revocable without rotating a human account | `ci/jenkins/examples/pipeline-factory.Jenkinsfile` (validate stage), `docs/adr/0011-ci-platform-jenkins.md` §"Drift-gate commit-back" | EXL Platform Engineering |
 
+## Implementation Documentation controls (IDG, ADR-0012)
+
+> **Status:** Proposed. These rows describe the target state once
+> [ADR-0012](../adr/0012-implementation-document-generation.md) is `Accepted` and
+> the IDG (epic E14) is built. A per-version Implementation Document is produced
+> + human-approved for every model from Group 1 onward.
+
+| Control | Implementation | Evidence artifact | Owner |
+| --- | --- | --- | --- |
+| **SR 11-7 III — model implementation evidence** | LLM-assisted, human-approved per-version "as-built" Implementation Document records how each model was implemented vs designed, with explicit deviations + rationale | `packages/<name>/<version>/implementation.md` (approved PDF in S3); `implementation_doc_ref` on the registry record | ABSA Model Risk + EXL Platform Engineering |
+| **ABSA GMRMG — model lifecycle traceability** | Implementation doc is version-anchored (digest-referenced from the registry record) and regenerated on re-version with a change-log diff — design ↔ implementation never silently drift | Registry record `implementation_doc_ref`; doc change-log section | ABSA Model Risk |
+| **POPIA — data minimisation (LLM path)** | The IDG context bundle sent to the LLM is code + dev doc + schemas + metadata only; a pre-flight guard fails the run on any raw-data / PII payload | `impl-doc-generator/` raw-data guard (ADR-0012); LLM no-retention DPA | EXL Platform Engineering + ABSA Compliance |
+| **SOC 2 CC7.x — evidence provenance** | Each Implementation Document records the LLM provider + version, the input-artefact digests, and the human approver | Implementation doc provenance block | EXL Platform Engineering |
+
 ## Out-of-matrix items (deferred)
 
 The following control rows belong to later phases and will be added to this matrix when the corresponding modules land:

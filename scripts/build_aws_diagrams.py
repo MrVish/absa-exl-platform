@@ -128,6 +128,7 @@ def track_a():
     ):
         with Cluster("ABSA", graph_attr=ABSA):
             pkg = S3("Signed code\npackage")
+            devdoc = General("Model dev\ndocumentation")
 
         with Cluster("EXL exl-prod", graph_attr=EXL):
             with Cluster("Code Intake", graph_attr=ONBOARD):
@@ -145,6 +146,14 @@ def track_a():
                 tf = General("Pipeline manifest\n+ registration.json")
                 gen >> Edge(color=GRAY) >> tf
 
+            with Cluster("Impl Doc Generator (IDG, ADR-0012)", graph_attr=SECC):
+                idg = Lambda("Impl Doc Generator\n(facts + LLM draft)")
+                llm = General("Azure OpenAI /\nAnthropic (adapter)")
+                impldoc = General("implementation.md\n(human-approved)")
+                idg >> Edge(color=SEC, label="code+docs+metadata\n(no raw data / PII)") >> llm
+                llm >> Edge(color=GRAY) >> idg
+                idg >> Edge(color=GRAY) >> impldoc
+
             with Cluster("Registry", graph_attr=DATAC):
                 api = APIGateway("Registry API")
                 reg_fn = Lambda("Approval state\nmachine")
@@ -154,7 +163,10 @@ def track_a():
         pkg >> Edge(color=DATA, style="dashed", label="S3 replication") >> intake
         manifest >> Edge(color=SEC, label="sign") >> cmk
         signed >> Edge(color=GRAY, label="upstream_ref by digest") >> gen
+        devdoc >> Edge(color=GRAY, label="dev doc") >> idg
+        tf >> Edge(color=GRAY, label="pipeline facts") >> idg
         tf >> Edge(color=HTTP, label="SigV4 POST") >> api
+        impldoc >> Edge(color=HTTP, label="implementation_doc_ref") >> api
 
 
 def track_b():

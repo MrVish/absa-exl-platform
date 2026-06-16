@@ -40,7 +40,7 @@ You are two engineers splitting the AWS foundation between Infra and Platform/Co
 | Seat | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | Cap |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | AWS | 5.0 | 6.0 | 3.0 | 2.5 | - | 2.0 | 2.0 | - | 3.0 | 3.0 | 2.0 | - | 8 |
-| AWS2 | 1.0 | 2.0 | 4.5 | 5.0 | 5.0 | 6.0 | 5.0 | 0.5 | - | - | 3.5 | - | 8 |
+| AWS2 | 1.0 | 2.0 | 4.5 | 5.0 | 5.0 | 6.0 | 7.0 | 2.5 | - | - | 3.5 | - | 8 |
 
 _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus factor. Loads sit below cap on purpose - the gap is ceremonies, review, and slack for the unknowns._
 
@@ -94,9 +94,11 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - [AWS2] IAM least-privilege audit (automated policy analysis) (1.5d)
 - [AWS2] Encryption validation: in-transit (TLS/replication) + at-rest (KMS) evidence (1.5d)
 - [AWS2] Initial production scoring runs (models 1-2) (2.0d)
+- [AWS2] Build context bundler (facts from manifest/registry/validation summary) (2.0d)
 
 **S8 (Sep 21-Oct 02)** - _GROUP 1 ABSA SIGN-OFF; pen-test remediation; 2nd SAS dev onboarded; G2 plan_
 - [AWS2] G1 production schedules confirmed live (0.5d)
+- [AWS2] Render md + PDF; human review + approval workflow + provenance capture (2.0d)
 
 **S9 (Oct 05-Oct 16)** - _Group 2 wave 1 (models 3-5) live; dashboards validated with ABSA; cost dashboard_
 - [AWS] Model 3: deploy to prod + smoke (0.5d)

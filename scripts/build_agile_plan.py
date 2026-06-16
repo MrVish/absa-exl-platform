@@ -152,6 +152,9 @@ EPICS = [
      "Integration tests on real AWS, performance/load vs SLA, failure-mode/resilience, UAT with ABSA, regression pack."),
     ("E13", "Capacity & Resourcing", "TL", "S5-S8",
      "2-month capacity review; confirm 3rd SAS dev onboarding (S8) + AWS ramp-down plan after foundation (S7)."),
+    ("E14", "Model Implementation Documentation (IDG)", "TL", "S5-S12",
+     "LLM-assisted Implementation Document Generator (ADR-0012): drafts the per-version 'as-built' doc from "
+     "dev docs + code + platform facts; human-approved; SR 11-7/GMRMG evidence; one living doc per model version."),
 ]
 
 # ---------- Stories ----------
@@ -259,6 +262,12 @@ STORIES = [
      "2-month velocity review; confirm 3rd SAS dev onboarding (S8); plan AWS ramp-down/redeploy after S7 foundation."),
     ("ST-1302", "E13", "3rd SAS developer onboarding", "S8", "Must",
      "SAS3 productive: env green, standards studied, G1 reconciliation shadowed."),
+    ("ST-1401", "E14", "IDG design + decision", "S5-S6", "Must",
+     "ADR-0012 accepted; impl-doc template + section schema; deterministic context-bundle spec; LLM provider DPA confirmed."),
+    ("ST-1402", "E14", "IDG build", "S7", "Must",
+     "Context bundler (facts from manifest/registry/validation) + LLM provider adapter (Azure OpenAI / Anthropic) + grounded prompt + raw-data/PII guard."),
+    ("ST-1403", "E14", "IDG governance + integration", "S7-S8", "Must",
+     "Render md+PDF; human review + approval workflow + provenance capture; implementation_doc_ref wired into package manifest + registry; G1 docs generated."),
 ]
 
 # ---------- Tasks (explicit, Sprints 1-8 IDs stable for the kickoff briefs) ----------
@@ -358,6 +367,8 @@ TASKS = [
     ("T-0511", "ST-0503", "Optimize + standardize model-2 scoring code (profile, refactor, unit-test)", "SAS2", 4, 4.0, "T-0510", "", ""),
     ("T-0512", "ST-0503", "Model-2 regression harness", "SAS2", 5, 2.0, "T-0511", "", ""),
     ("T-0513", "ST-0503", "Package model-2 + code-intake green", "SAS2", 5, 1.0, "T-0512", "", ""),
+    ("T-0516", "ST-0502", "Model-1 implementation doc: generate (IDG) + review + approve", "SAS", 8, 0.5, "T-1405", "", "ADR-0012; living doc per version"),
+    ("T-0517", "ST-0503", "Model-2 implementation doc: generate (IDG) + review + approve", "SAS2", 8, 0.5, "T-1405", "", "ADR-0012"),
     # E06
     ("T-0601", "ST-0601", "ADR: D04 compute choice (SFN+Lambda vs SageMaker) w/ architecture board", "AWS2", 3, 1.0, "", "", "Gates compute build in S5"),
     ("T-0602", "ST-0602", "Deploy real ASL standard-batch for model-1 (dev)", "AWS2", 5, 3.0, "T-0601,T-0509", "", ""),
@@ -438,6 +449,14 @@ TASKS = [
     ("T-1305", "ST-1302", "Run `make demo` green locally", "SAS3", 8, 0.5, "T-1304", "", ""),
     ("T-1306", "ST-1302", "Study SAS standards + a packaged G1 model", "SAS3", 8, 1.0, "T-1304", "", ""),
     ("T-1307", "ST-1302", "Shadow a G1 reconciliation cycle", "SAS3", 8, 1.0, "T-0810", "", ""),
+    # E14 - Implementation Document Generator (ADR-0012)
+    ("T-1407", "ST-1401", "ADR-0012 + confirm LLM provider DPA (Azure OpenAI / Anthropic) with ABSA", "TL", 5, 0.5, "", "ABSA: LLM data-processing terms", "*** gates first real IDG run ***"),
+    ("T-1401", "ST-1401", "Design impl-doc template + section schema + deterministic context-bundle spec", "TL", 6, 1.5, "T-1407", "", "Co-design with SAS"),
+    ("T-1402", "ST-1402", "Build context bundler (facts from manifest/registry/validation summary)", "AWS2", 7, 2.0, "T-1401,T-0317", "", "Facts injected verbatim, never LLM-authored"),
+    ("T-1403", "ST-1402", "LLM provider adapter (Azure OpenAI / Anthropic) + grounded prompt", "TL", 7, 2.0, "T-1401", "ABSA: LLM data-processing terms", "Provider-swappable behind an adapter"),
+    ("T-1404", "ST-1402", "Raw-data / PII guard on the context bundle (pre-flight checker)", "DE", 7, 1.0, "T-1402", "", "Bundle = code+docs+metadata only; fail on data payload"),
+    ("T-1405", "ST-1403", "Render md + PDF; human review + approval workflow + provenance capture", "AWS2", 8, 2.0, "T-1403", "", ""),
+    ("T-1406", "ST-1403", "Wire implementation_doc_ref into package-manifest + registry schema (regen models)", "DE", 8, 1.5, "T-1404", "", "Digest-reference pattern like python_pyproject_ref"),
 ]
 
 # ---------- Group 2 per-model tasks (generated) ----------
@@ -463,6 +482,7 @@ G2_TEMPLATE = [
     ("PKG", "package per ADR-0010 + code-intake green", "SASX", 0.5),
     ("REC", "reconcile vs benchmark + defect fix", "SASX", 1.5),
     ("PIR", "PIR pack + sign-off prep", "SASX", 0.5),
+    ("IDD", "implementation doc: generate (IDG) + approve", "SASX", 0.5),
     ("PIPE", "pipeline config + EventBridge schedule", "AWS", 0.5),
     ("DEP", "deploy to prod + smoke", "AWS", 0.5),
     ("MON", "CI + monitoring wiring", "DevOps", 0.5),
@@ -507,7 +527,7 @@ MODELS = [
     ("Model 9", "Group 2 W3", "S11", "SAS", "TBD"),
     ("Model 10", "Group 2 W3", "S11", "SAS2", "TBD"),
 ]
-MODEL_STAGES = ["Contract", "Review", "Optimize", "Package", "Deploy", "Reconcile", "PIR", "Sign-off"]
+MODEL_STAGES = ["Contract", "Review", "Optimize", "Package", "Deploy", "Reconcile", "Impl doc", "PIR", "Sign-off"]
 
 # ---------- Governance & cadence ----------
 GOV_CEREMONIES = [
@@ -543,6 +563,7 @@ RAID = [
     ("Dependency", "DEP-06", "CAB / IVU API contract", "ABSA", "T-0701 (S5)", "Open - change workflow manual"),
     ("Dependency", "DEP-07", "Network connectivity choice (peering/TGW/PrivateLink)", "ABSA", "T-0307 (S3)", "Open - data plane blocked"),
     ("Dependency", "DEP-08", "Approved model docs + code + benchmarks (1-2 first)", "ABSA", "T-0403/0505 (S2)", "Open - SAS + DE model work blocked"),
+    ("Dependency", "DEP-09", "LLM data-processing terms (Azure OpenAI / Anthropic): no-retention DPA + region", "ABSA", "T-1407/1403 (S5/S7)", "Open - gates first real IDG run (ADR-0012); manual impl-doc fallback otherwise"),
     ("Risk", "RISK-01", "ABSA account onboarding delayed past S2", "TL", "High / Med", "2 AWS engineers + ~2d/sprint slack in S2-S5 absorb a slip; pre-stage TF + tfvars; LocalStack keeps CI green; escalate end S1"),
     ("Risk", "RISK-02", "Group 1 sign-off (S8) slips, cascades to Group 2", "ABSA Risk", "Med / High", "Models 1-2 run in PARALLEL (2 SAS) from S2; dress rehearsal S6; defect buffer S7-S8"),
     ("Risk", "RISK-03", "Compute platform choice (D04) blocks S5 build", "TL", "Med / Med", "Decision required end S3 at architecture board; AWS2 owns it"),
@@ -554,6 +575,7 @@ RAID = [
     ("Assumption", "ASM-02", "AWS2 redeploys or ramps down after S7 once foundation is built", "TL", "S8+", "Foundation is front-loaded; AWS load drops sharply S8-S12. 3rd AWS dropped (was under-utilized) - 2 carry the ~62-day AWS workload"),
     ("Assumption", "ASM-03", "All 10 models fit standard-batch / scalable-batch templates", "TL", "S6+", "Realtime tier is a placeholder; a realtime model would add scope"),
     ("Assumption", "ASM-04", "ABSA benchmarks are deterministic + reproducible", "SAS", "S4+", "Required for tolerance-band reconciliation to be meaningful"),
+    ("Assumption", "ASM-05", "IDG sends the LLM code + docs + metadata ONLY - never raw data / PII", "TL", "S7+", "ADR-0012 data-minimisation guard; keeps IDG consistent with the data-residency posture (ADR-0001)"),
     ("Issue", "ISS-00", "(none logged yet - populate during delivery)", "TL", "-", "-"),
 ]
 

@@ -23,7 +23,7 @@ Your Sprint 1 load: **4.0 effort-days** (cap 8).
 
 | Seat | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | Cap |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| DE | 4.0 | 4.0 | 5.0 | 4.0 | 5.5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 3.0 | 1.5 | 8 |
+| DE | 4.0 | 4.0 | 5.0 | 4.0 | 5.5 | 4.5 | 5.5 | 6.0 | 4.5 | 4.5 | 3.0 | 1.5 | 8 |
 
 _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus factor. Loads sit below cap on purpose - the gap is ceremonies, review, and slack for the unknowns._
 
@@ -63,11 +63,13 @@ _Cap is 8 d/sprint per engineer (6 for TL), i.e. 10 working days x 0.8 focus fac
 - DQ on first production runs + threshold tuning (2.0d)
 - Backfill / re-run capability for missed cadence windows (1.5d)
 - Implement + verify S3 retention/archival per model class (1.0d)
+- Raw-data / PII guard on the context bundle (pre-flight checker) (1.0d)
 
 **S8 (Sep 21-Oct 02)** - _GROUP 1 ABSA SIGN-OFF; pen-test remediation; 2nd SAS dev onboarded; G2 plan_
 - PIR data evidence: lineage + DQ reports (1.0d)
 - DQ + drift panels alongside run status (2.0d)
 - UAT execution support (G1) with ABSA (1.5d)
+- Wire implementation_doc_ref into package-manifest + registry schema (regen models) (1.5d)
 
 **S9 (Oct 05-Oct 16)** - _Group 2 wave 1 (models 3-5) live; dashboards validated with ABSA; cost dashboard_
 - Model 3: contract + input schema (1.0d)
