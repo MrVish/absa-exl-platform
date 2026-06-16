@@ -87,7 +87,8 @@ pipeline {
                       registry/api/src \
                       pipeline-factory/src \
                       manifest-signer/src \
-                      code-intake/src
+                      code-intake/src \
+                      impl-doc-generator/src
                 '''
             }
         }

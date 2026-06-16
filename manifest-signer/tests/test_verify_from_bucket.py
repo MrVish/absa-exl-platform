@@ -17,9 +17,7 @@ def runner():
 
 
 @pytest.fixture
-def signed_envelope_in_s3(
-    unsigned_envelope, signing_key, kms_client, s3_client
-) -> dict:
+def signed_envelope_in_s3(unsigned_envelope, signing_key, kms_client, s3_client) -> dict:
     """Sign a sample envelope, upload manifest + PEM to moto S3.
 
     Returns a dict with 'manifest_bucket', 'manifest_key', 'pem_bucket',
@@ -78,9 +76,12 @@ def test_verify_from_bucket_succeeds_on_valid(
         main,
         [
             "verify-from-bucket",
-            "--bucket", signed_envelope_in_s3["manifest_bucket"],
-            "--key", signed_envelope_in_s3["manifest_key"],
-            "--public-key-bucket", signed_envelope_in_s3["pem_bucket"],
+            "--bucket",
+            signed_envelope_in_s3["manifest_bucket"],
+            "--key",
+            signed_envelope_in_s3["manifest_key"],
+            "--public-key-bucket",
+            signed_envelope_in_s3["pem_bucket"],
         ],
     )
     assert result.exit_code == 0, result.output
@@ -102,9 +103,12 @@ def test_verify_from_bucket_fails_on_tampered_envelope(
         main,
         [
             "verify-from-bucket",
-            "--bucket", signed_envelope_in_s3["manifest_bucket"],
-            "--key", signed_envelope_in_s3["manifest_key"],
-            "--public-key-bucket", signed_envelope_in_s3["pem_bucket"],
+            "--bucket",
+            signed_envelope_in_s3["manifest_bucket"],
+            "--key",
+            signed_envelope_in_s3["manifest_key"],
+            "--public-key-bucket",
+            signed_envelope_in_s3["pem_bucket"],
         ],
     )
     assert result.exit_code == 1, result.output
@@ -119,9 +123,12 @@ def test_verify_from_bucket_fails_when_pem_missing(
         main,
         [
             "verify-from-bucket",
-            "--bucket", signed_envelope_in_s3["manifest_bucket"],
-            "--key", signed_envelope_in_s3["manifest_key"],
-            "--public-key-bucket", "nonexistent-bucket",
+            "--bucket",
+            signed_envelope_in_s3["manifest_bucket"],
+            "--key",
+            signed_envelope_in_s3["manifest_key"],
+            "--public-key-bucket",
+            "nonexistent-bucket",
         ],
     )
     assert result.exit_code == 1, result.output
@@ -133,17 +140,17 @@ def test_verify_from_bucket_accepts_explicit_pem_uri(
     runner, signed_envelope_in_s3, kms_client, s3_client
 ):
     """--public-key-uri override bypasses auto-derivation."""
-    pem_uri = (
-        f"s3://{signed_envelope_in_s3['pem_bucket']}/"
-        f"{signed_envelope_in_s3['pem_key']}"
-    )
+    pem_uri = f"s3://{signed_envelope_in_s3['pem_bucket']}/{signed_envelope_in_s3['pem_key']}"
     result = runner.invoke(
         main,
         [
             "verify-from-bucket",
-            "--bucket", signed_envelope_in_s3["manifest_bucket"],
-            "--key", signed_envelope_in_s3["manifest_key"],
-            "--public-key-uri", pem_uri,
+            "--bucket",
+            signed_envelope_in_s3["manifest_bucket"],
+            "--key",
+            signed_envelope_in_s3["manifest_key"],
+            "--public-key-uri",
+            pem_uri,
         ],
     )
     assert result.exit_code == 0, result.output
