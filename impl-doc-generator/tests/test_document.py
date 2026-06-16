@@ -70,3 +70,25 @@ def test_approver_sets_status(package_dir: Path, dev_doc: Path) -> None:
     assert "Status: APPROVED" in doc.markdown
     assert "Jane Risk" in doc.markdown
     assert doc.provenance["approver"] == "Jane Risk"
+
+
+def test_exhaustive_structure_and_appendices(
+    package_dir: Path, pipeline_manifest: Path, dev_doc: Path
+) -> None:
+    b = build_context_bundle(package_dir, pipeline_manifest=pipeline_manifest, dev_doc=dev_doc)
+    doc = render_document(b, OfflineProvider(), generated_at=FIXED_TS)
+    md = doc.markdown
+    # exhaustive default structure
+    assert len(SECTION_SPECS) >= 25
+    assert "## 3. Intended use & restrictions" in md
+    assert "## 18. Chain-of-custody & signing evidence" in md
+    assert "## 23. Rollback, DR & operational runbook" in md
+    # appendices: full file inventory + provenance + dev-doc outline
+    assert "## Appendix A — File inventory & digests" in md
+    assert "## Appendix C — Development document outline" in md
+    assert "code-python" in md  # file-inventory kind label
+    assert "Methodology" in md  # dev-doc outline reflects the parsed dev doc
+    # provenance carries the new structure + dev-doc metadata
+    assert doc.provenance["section_count"] == len(SECTION_SPECS)
+    assert doc.provenance["dev_doc"]["format"] == "md"
+    assert doc.provenance["dev_doc"]["present"] is True

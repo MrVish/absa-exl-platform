@@ -17,55 +17,41 @@ from .bundle import (
     KIND_TEST,
     ContextBundle,
 )
+from .docparse import DATA_EXTENSIONS
 from .errors import RawDataGuardError
 
 ALLOWED_KINDS = frozenset({KIND_PYTHON, KIND_SAS, KIND_TEST, KIND_DEV_DOC, KIND_CONFIG, KIND_PIR})
 
-# Extensions that indicate a data payload, never code/docs/schema.
-DATA_EXTENSIONS = frozenset(
-    {
-        ".csv",
-        ".tsv",
-        ".psv",
-        ".parquet",
-        ".feather",
-        ".orc",
-        ".avro",
-        ".xls",
-        ".xlsx",
-        ".xlsm",
-        ".pkl",
-        ".pickle",
-        ".npy",
-        ".npz",
-        ".h5",
-        ".hdf5",
-        ".sas7bdat",
-        ".sav",
-        ".dta",
-        ".db",
-        ".sqlite",
-    }
-)
-
 # Path segments that indicate a data directory.
 DATA_PATH_SEGMENTS = frozenset({"data", "datasets", "dataset", "raw", "samples", "sample-data"})
 
-# A single reviewable file larger than this is suspicious (likely a data dump,
-# not source code or documentation).
+# A single reviewable code/config file larger than this is suspicious (likely a
+# data dump, not source code or schema).
 MAX_FILE_BYTES = 2_000_000
+# Development documents are legitimately large — a ~100-page dev doc extracts to
+# hundreds of KB of text (bundle.py budgets what actually reaches the LLM). Give
+# the dev-doc kind more headroom so a real document is never rejected for size.
+DEV_DOC_MAX_BYTES = 16_000_000
+
+
+def _max_bytes_for(kind: str) -> int:
+    return DEV_DOC_MAX_BYTES if kind == KIND_DEV_DOC else MAX_FILE_BYTES
 
 
 def _looks_like_tabular_data(text: str) -> bool:
-    """Heuristic: many lines with a consistent, high delimiter count = a table."""
+    """A file whose lines are *overwhelmingly* wide + delimited is a data dump.
+
+    Judged over the whole file (capped for performance), not just the head, so a
+    real dev doc that merely *embeds* a few tables stays well under the threshold,
+    while a CSV/TSV masquerading as a document trips it.
+    """
     lines = [ln for ln in text.splitlines() if ln.strip()]
     if len(lines) < 20:
         return False
-    sample = lines[:200]
+    sample = lines[:5000]
     for delim in (",", "\t", "|"):
-        counts = [ln.count(delim) for ln in sample]
-        wide = [c for c in counts if c >= 3]
-        if len(wide) >= 0.9 * len(sample):  # ~all sampled lines are wide + delimited
+        wide = sum(1 for ln in sample if ln.count(delim) >= 3)
+        if wide >= 0.9 * len(sample):  # ~all lines are wide + delimited -> a table
             return True
     return False
 
@@ -95,9 +81,10 @@ def guard_bundle(bundle: ContextBundle) -> None:
                 hint="move it or exclude it; the LLM receives code + docs only",
             )
 
-        if len(cf.text.encode("utf-8")) > MAX_FILE_BYTES:
+        cap = _max_bytes_for(cf.kind)
+        if len(cf.text.encode("utf-8")) > cap:
             raise RawDataGuardError(
-                f"content file {cf.path!r} exceeds {MAX_FILE_BYTES} bytes",
+                f"content file {cf.path!r} exceeds {cap} bytes",
                 hint="oversized reviewable files are likely data dumps",
             )
 

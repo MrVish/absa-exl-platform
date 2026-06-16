@@ -173,6 +173,14 @@ LLM-assisted, **human-approved** capability ([ADR-0012](docs/adr/0012-implementa
 - **Living + version-anchored:** one doc per model version, digest-referenced
   from the registry record (`implementation_doc_ref`); re-versioning regenerates
   it and captures the change-log diff.
+- **Handles the real dev doc + is exhaustive:** the development document is a
+  ~100-page **PDF or Word** file, not markdown. The IDG ingests `.pdf`/`.docx`
+  (and `.md`/`.txt`), parses it into a section outline, and **budgets** it into
+  the LLM context section-by-section so a large doc is never silently clipped.
+  The rendered document is **exhaustive** — 25 sections + 3 appendices (incl. a
+  full file inventory with digests and the parsed dev-doc outline). The section
+  set is a **data-driven default, pending alignment with ABSA's agreed
+  implementation-document structure** (which ABSA will supply, as for the dev doc).
 
 Why it matters: this *is* the **SR 11-7 / GMRMG model-implementation evidence**
 auditors expect, produced consistently as a by-product of onboarding.
@@ -181,10 +189,13 @@ auditors expect, produced consistently as a by-product of onboarding.
 `build_context_bundle → guard → provider.draft → render_document`, CLI
 `generate-impl-doc`. A deterministic **`offline`** provider runs in CI today
 (no network/keys); the **Azure OpenAI / Anthropic** adapters are lazy-loaded and
-activate once the data-processing agreement (RAID DEP-09) lands. See the
+activate once the data-processing agreement (RAID DEP-09) lands. It renders an
+**exhaustive 25-section structure** and ingests **PDF/Word** dev docs with
+section-aware budgeting. See the
 [worked example for `credit-risk-pd@1.0.0`](impl-doc-generator/examples/implementation-credit-risk-pd-1.0.0.md).
-Per-model rollout across Group 1/2 + the `implementation_doc_ref` schema wiring
-remain **epic E14** in the delivery plan (§8).
+Aligning the section structure with ABSA's agreed outline, per-model rollout
+across Group 1/2, and the `implementation_doc_ref` schema wiring remain **epic
+E14** in the delivery plan (§8).
 
 ---
 
@@ -192,12 +203,12 @@ remain **epic E14** in the delivery plan (§8).
 
 | Area | Status | Notes |
 |---|---|---|
-| Platform code (registry, pipeline-factory, signer, code-intake, contracts) | ✅ **Built + tested** | 278 tests; runs the full chain on LocalStack every PR |
+| Platform code (registry, pipeline-factory, signer, code-intake, contracts, impl-doc-generator) | ✅ **Built + tested** | 307 tests; runs the full chain on LocalStack every PR |
 | LocalStack end-to-end demo (`make demo`) | ✅ **Green in CI** | Producer + verifier chain, cross-account simulated |
 | Terraform (modules + per-env stacks) | ✅ **Written + validated** | ⏳ Not yet applied to real AWS (needs ABSA account IDs) |
 | Scoring runtime (Step Functions execution) | ⏳ **Templates render; runtime not built** | `scoring-engine/` is a placeholder |
 | PIR reconciliation engine | ⏳ **Not built** | `pir-engine/` is a placeholder (Phase 4) |
-| Implementation Document Generator (IDG) | ✅ **Built (offline)** | `impl-doc-generator/`; offline provider + worked example; cloud LLM adapters pending DPA |
+| Implementation Document Generator (IDG) | ✅ **Built (offline)** | `impl-doc-generator/`; exhaustive 25-section structure; PDF/Word dev-doc ingestion + budgeting; offline provider + worked example; cloud adapters pending DPA; structure pending ABSA alignment |
 | CI on Jenkins (ADR-0011) | 🟡 **Scaffold done (M1)** | Shared library + 5 example Jenkinsfiles; cutover (M2/M3) pending |
 | Real-AWS deployment | ⏳ **Pending** | Blocked on ABSA inputs — see §7 |
 | 10-model onboarding | ⏳ **Pending** | The substance of the 12-sprint plan — see §8 |
