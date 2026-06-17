@@ -78,16 +78,20 @@ def test_exhaustive_structure_and_appendices(
     b = build_context_bundle(package_dir, pipeline_manifest=pipeline_manifest, dev_doc=dev_doc)
     doc = render_document(b, OfflineProvider(), generated_at=FIXED_TS)
     md = doc.markdown
-    # exhaustive default structure
-    assert len(SECTION_SPECS) >= 25
-    assert "## 3. Intended use & restrictions" in md
-    assert "## 18. Chain-of-custody & signing evidence" in md
-    assert "## 23. Rollback, DR & operational runbook" in md
-    # appendices: full file inventory + provenance + dev-doc outline
+    # exhaustive structure, aligned to ABSA's Model Development Document
+    assert len(SECTION_SPECS) >= 30
+    assert "## 8. Data sources & lineage (as wired)" in md
+    assert "## 20. Benchmark reconciliation (as implemented)" in md
+    assert "## 28. Chain-of-custody & signing evidence" in md
+    assert "## 33. Rollback, DR & operational runbook" in md
+    # appendices: file inventory + provenance + dev-doc outline + cross-walk
     assert "## Appendix A — File inventory & digests" in md
-    assert "## Appendix C — Development document outline" in md
+    assert "## Appendix C — Development document outline (as parsed)" in md
+    assert "## Appendix D — Development-document cross-walk" in md
     assert "code-python" in md  # file-inventory kind label
     assert "Methodology" in md  # dev-doc outline reflects the parsed dev doc
+    # cross-walk proves dev-doc coverage (e.g. benchmarking -> reconciliation §20)
+    assert "Benchmarking against current scorecard" in md
     # provenance carries the new structure + dev-doc metadata
     assert doc.provenance["section_count"] == len(SECTION_SPECS)
     assert doc.provenance["dev_doc"]["format"] == "md"
