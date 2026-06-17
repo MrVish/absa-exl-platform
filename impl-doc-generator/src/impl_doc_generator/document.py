@@ -6,12 +6,16 @@ the provider and clearly labelled. The document's digest is the
 ``implementation_doc_ref`` recorded on the registry record; it is computed over
 the rendered markdown (LF-normalised), which does not contain the digest itself.
 
-The section set (``SECTION_SPECS``) is the platform **default** — an exhaustive
-"as-built" structure aligned to SR 11-7 (model implementation), ABSA GMRMG, and
-the platform's chain-of-custody. It is data-driven on purpose: ABSA's agreed
-implementation-document structure replaces/extends this list with no change to
-the rendering engine. Each section is narrative-by-default; sections that have
-deterministic platform facts attach them via ``FACT_RENDERERS``.
+The section set (``SECTION_SPECS``) is an **exhaustive "as-built" structure
+aligned section-by-section to ABSA's Model Development Document** (the agreed
+TOC: Overview, Portfolio, Data Landscape & Preparation, Model Development, Final
+Scorecard, Performance, Strengths/Weaknesses, Post-Development, Conservatism,
+Implementation, References + appendices). Each dev-doc theme has an
+as-implemented / as-verified / as-hosted counterpart here, plus the platform
+as-built sections (pipeline, environment, chain-of-custody, controls) that the
+dev doc does not carry. ``DEV_DOC_TOC`` drives the cross-walk appendix that
+proves every dev-doc section is covered. The structure is data-driven: it is a
+localised edit, not a rewrite, when ABSA finalises its implementation-doc TOC.
 """
 
 from __future__ import annotations
@@ -24,149 +28,273 @@ from typing import Any
 from .bundle import ContextBundle
 from .providers import LLMProvider, Section
 
-IDG_VERSION = "0.1.0"
+IDG_VERSION = "0.2.0"
 SIGNING_ALGORITHM = "RSASSA_PKCS1_V1_5_SHA_256"
 GOVERNING_STANDARDS = "SR 11-7 (model implementation), ABSA GMRMG, SARB GOI, POPIA"
 
 SYSTEM_PROMPT = (
     "You are a model-implementation documentation assistant for a bank. You write "
     "the 'as-built' implementation record for a model hosted on the EXL platform, "
-    "for SR 11-7 / ABSA GMRMG reviewers. Ground every statement in the provided "
-    "context (code, the development document, schemas, platform metadata). Never "
-    "invent facts. Where the implementation deviates from the development design, "
-    "state the deviation and the rationale explicitly. Where the context does not "
-    "contain a detail a section asks for, say so plainly rather than guessing. Be "
-    "precise and concise, and cite the source artefact (file path or fact) per claim."
+    "for SR 11-7 / ABSA GMRMG reviewers. The document mirrors ABSA's Model "
+    "Development Document section-by-section: for each topic the developers "
+    "documented, record how EXL *implemented, verified, or hosted* it. Ground "
+    "every statement in the provided context (code, the development document, "
+    "schemas, platform metadata). Never invent facts. Where the implementation "
+    "deviates from the development design, state the deviation and the rationale "
+    "explicitly. Where the context lacks a detail a section asks for, say so "
+    "plainly. Be precise and concise, and cite the source artefact per claim."
 )
 
-# (section_id, title, drafting instruction). The platform default — exhaustive
-# and data-driven; ALIGN/REPLACE with ABSA's agreed structure when supplied.
+# (section_id, title, drafting instruction). Exhaustive as-built structure,
+# aligned to ABSA's Model Development Document TOC. See DEV_DOC_TOC for the
+# cross-walk. Data-driven: replace/extend when ABSA finalises its impl-doc TOC.
 SECTION_SPECS: list[tuple[str, str, str]] = [
+    # --- 1. Overview (dev-doc Part 1) ---
     (
-        "executive-summary",
-        "1. Executive summary",
+        "exec-summary",
+        "1. Executive summary (as-built)",
         "As-built overview: what was implemented, tier, cadence, and current status.",
     ),
     (
         "model-identification",
-        "2. Model identification & governance",
-        "State model name, version, owner, model-risk tier, and governing standards.",
+        "2. Model identification & classification",
+        "Name, version, owner, model-risk classification/tier, materiality, standards.",
     ),
+    (
+        "governance-change",
+        "3. Governance, approvals & change policy",
+        "How governance + change policy are enforced: CAB/IVU, registry approval, versioning.",
+    ),
+    (
+        "standards",
+        "4. Modelling standards & policies (as enforced)",
+        "How modelling/dev standards are enforced via Code Intake checks + packaging.",
+    ),
+    (
+        "model-description",
+        "5. Model description & methodology (as documented)",
+        "Summarise the model, its methodology and theory, from the development document.",
+    ),
+    # --- 2. Portfolio & scope (dev-doc Part 2) ---
     (
         "intended-use",
-        "3. Intended use & restrictions",
-        "From the dev doc: intended use, approved scope, exclusions, and limitations.",
+        "6. Intended use, portfolio & target market",
+        "Intended use, product/portfolio scope, target market, and explicit exclusions.",
     ),
     (
-        "methodology",
-        "4. Model methodology (as documented)",
-        "Summarise the model methodology and theory from the development document.",
+        "regulatory",
+        "7. Regulatory & legislative context",
+        "Applicable regulation/legislation (POPIA, SARB, NCA) and any external changes.",
+    ),
+    # --- 3. Data landscape & preparation (dev-doc Part 3) ---
+    (
+        "data-sources",
+        "8. Data sources & lineage (as wired)",
+        "Data sources and how they are sourced/replicated/wired into the platform.",
     ),
     (
-        "inputs-lineage",
-        "5. Inputs & data lineage",
-        "Explain the inputs and how data is sourced/wired, per the PIR and data code.",
+        "variables",
+        "9. Input variables & definitions (PIR mapping)",
+        "Input variables and definitions per the PIR mapping and the input contract.",
+    ),
+    (
+        "data-flow",
+        "10. Data flow, ingestion & granularity (as implemented)",
+        "As-implemented data flow, bucket layout, arrival validation, account/customer keying.",
+    ),
+    (
+        "target-definition",
+        "11. Default / target definition (as implemented)",
+        "How the default/target label is defined and implemented in the data/scoring code.",
+    ),
+    (
+        "exclusions",
+        "12. Exclusions & filtering (as implemented)",
+        "Exclusions and filtering rules as implemented in the data-preparation code.",
     ),
     (
         "feature-engineering",
-        "6. Feature engineering & transformations",
-        "Describe how raw inputs become model features in the data/scoring code.",
+        "13. Feature engineering & transformations",
+        "How raw inputs become model features/characteristics in the code.",
     ),
     (
         "data-quality",
-        "7. Data quality & validation controls",
-        "Describe the DQ checks and the Code Intake validation results for the package.",
+        "14. Data quality & validation controls",
+        "DQ checks, drift, and the Code Intake validation results for the package.",
+    ),
+    # --- 4. Model development (dev-doc Part 4) ---
+    (
+        "dev-methodology",
+        "15. Development methodology & sample (reference)",
+        "Reference the dev methodology, period, sample design, univariate/multivariate work.",
     ),
     (
-        "outputs",
-        "8. Outputs & downstream consumption",
-        "Explain the outputs, the output contract, and how results are consumed.",
+        "segmentation",
+        "16. Segmentation (as implemented)",
+        "Model segmentation and how segment routing is implemented in scoring.",
     ),
+    # --- 5. Final scorecard (dev-doc Part 5) ---
     (
-        "scoring-logic",
-        "9. Scoring logic as implemented",
-        "Explain step by step how the scoring code computes the result, from the code.",
+        "scorecard",
+        "17. Final scorecard & scoring logic (as implemented)",
+        "Final scorecard variables/weights and how scoring computes the result, from code.",
     ),
     (
         "optimizations",
-        "10. Implementation optimizations & changes",
-        "Describe optimizations EXL made vs the dev code and why behaviour is preserved.",
+        "18. Implementation optimizations & changes",
+        "Optimizations EXL made vs the dev code and why behaviour is preserved.",
     ),
+    # --- 6 + 8. Performance, reconciliation & monitoring (dev-doc Parts 6, 8) ---
     (
-        "pipeline-impl",
-        "11. Pipeline architecture",
-        "Describe the pipeline: tier, the Step Functions flow, compute, and where it runs.",
-    ),
-    (
-        "scheduling",
-        "12. Scheduling, cadence & SLAs",
-        "Describe the run schedule/cadence, expected runtime, and any SLA targets.",
-    ),
-    (
-        "environment",
-        "13. Environment & dependencies",
-        "Describe the runtime environment and pinned dependencies used to run the model.",
-    ),
-    (
-        "code-inventory",
-        "14. Code inventory & structure",
-        "Walk through the package file layout and each component's responsibility.",
+        "performance",
+        "19. Model performance & discrimination (verified)",
+        "Performance/discrimination metrics and how they were verified on the platform.",
     ),
     (
         "reconciliation",
-        "15. Reconciliation & benchmark validation",
-        "Describe reconciliation vs ABSA's benchmark, including tolerance bands.",
+        "20. Benchmark reconciliation (as implemented)",
+        "Reconciliation vs ABSA's benchmark scorecard, including tolerance bands.",
     ),
     (
         "monitoring",
-        "16. Monitoring & performance tracking",
-        "Describe post-deployment monitoring: drift, volumes, stability, and alerting.",
+        "21. Monitoring & tracking framework (as implemented)",
+        "As-implemented monitoring: run status, DQ/drift, score stability, alerting.",
+    ),
+    (
+        "tracking-metrics",
+        "22. Tracking metrics & stability (as wired)",
+        "Tracking metrics (PSI, score/variable stability) wired into dashboards/alerts.",
+    ),
+    # --- 10. As-built platform implementation (dev-doc Part 10, expanded) ---
+    (
+        "pipeline",
+        "23. Pipeline architecture & execution",
+        "Pipeline tier, the Step Functions flow, compute, and where it runs.",
+    ),
+    (
+        "scheduling",
+        "24. Scheduling, cadence & SLAs",
+        "Run schedule/cadence, expected runtime, and any SLA targets.",
+    ),
+    (
+        "environment",
+        "25. Runtime environment & dependencies",
+        "Runtime environment and pinned dependencies used to run the model.",
+    ),
+    (
+        "code-inventory",
+        "26. Code inventory & package structure",
+        "Productized package layout and each component's role (dev code -> package).",
     ),
     (
         "security",
-        "17. Security & access controls",
-        "Describe IAM, KMS, cross-account boundaries, and the data-residency posture.",
+        "27. Security & access controls",
+        "IAM, KMS, cross-account boundaries, and the data-residency posture.",
     ),
     (
         "chain-of-custody",
-        "18. Chain-of-custody & signing evidence",
-        "Explain the digest anchor and signing binding package, pipeline, and registry.",
+        "28. Chain-of-custody & signing evidence",
+        "The digest anchor and signing binding package, pipeline, and registry.",
     ),
+    # --- 9. Conservatism (dev-doc Part 9) ---
     (
-        "approvals",
-        "19. Approvals & sign-off",
-        "Record the approval path (CAB/IVU) and the registry approval state.",
+        "conservatism",
+        "29. Conservatism & overlays (as implemented)",
+        "Any conservatism, overlays or caps and how they are applied in scoring.",
     ),
+    # --- 7 + risk/ops ---
     (
         "deviations",
-        "20. Deviations from the development design",
-        "List every deviation from the dev design, each with an explicit rationale.",
+        "30. Deviations from the development design",
+        "Every deviation from the dev design, each with an explicit rationale.",
     ),
     (
         "assumptions",
-        "21. Assumptions & constraints",
-        "List assumptions made during implementation and any operating constraints.",
+        "31. Assumptions & constraints",
+        "Assumptions made during implementation and any operating constraints.",
     ),
     (
         "limitations",
-        "22. Known limitations & residual risks",
-        "List known limitations and residual risks of the implementation.",
+        "32. Strengths, weaknesses & residual risks",
+        "Model strengths/weaknesses and residual risks, and how implementation mitigates.",
     ),
     (
         "rollback-dr",
-        "23. Rollback, DR & operational runbook",
-        "Describe rollback, DR posture, and the operational runbook for this model.",
+        "33. Rollback, DR & operational runbook",
+        "Rollback, DR posture, and the operational runbook for this model.",
     ),
     (
+        "approvals",
+        "34. Approvals & sign-off",
+        "Approval path (CAB/IVU) and the registry approval state for this version.",
+    ),
+    # --- Living record (dev-doc Parts 1.7, 11) ---
+    (
         "change-log",
-        "24. Change log",
-        "Note this version and what changed relative to any prior version.",
+        "35. Change log & rationalisation history",
+        "This version, what changed, and the model rationalisation history.",
     ),
     (
         "open-items",
-        "25. Open items & follow-ups",
-        "List outstanding items, pending approvals, or known TODOs.",
+        "36. Open items & follow-ups",
+        "Outstanding items, pending approvals, or known TODOs.",
     ),
+    (
+        "references",
+        "37. References & source artefacts",
+        "Source artefacts, digests, dev-doc reference, and related ADRs.",
+    ),
+]
+
+# Cross-walk: ABSA Model Development Document section -> implementation-doc
+# section(s) that cover it as-built. Proves exhaustive coverage for reviewers.
+DEV_DOC_TOC: list[tuple[str, str]] = [
+    ("1 Overview", "§1-§5"),
+    ("   1.1 Executive Summary", "§1"),
+    ("   1.2 Model Classification", "§2"),
+    ("   1.3 Background and motivation", "§5"),
+    ("   1.4 Model governance and change policy", "§3"),
+    ("   1.5 Modelling standards and policies", "§4"),
+    ("   1.6 Model Description", "§5"),
+    ("   1.7 Model rationalisation history", "§35"),
+    ("   1.8 Document Structure", "Appendix D (this cross-walk)"),
+    ("2 Portfolio Overview", "§6-§7"),
+    ("   2.1 Product Information, Features & Target Markets", "§6"),
+    ("   2.2 External Legislative Changes", "§7"),
+    ("3 Data Landscape and Data Preparation", "§8-§14"),
+    ("   3.1 Data Sources", "§8"),
+    ("   3.2 Variable Definitions", "§9"),
+    ("   3.3 Data Flow", "§10"),
+    ("   3.4 Default Definition", "§11"),
+    ("   3.5 Account vs Customer level Treatment", "§10"),
+    ("   3.6 Exclusions", "§12"),
+    ("4 Model Development", "§15-§16"),
+    ("   4.1 Methodology", "§5, §15"),
+    ("   4.2 Development Period", "§15"),
+    ("   4.3 Multiple Models / Segmentation", "§16"),
+    ("   4.4 Sample Design", "§15"),
+    ("   4.5 Univariate Analysis", "§15"),
+    ("   4.6 Multivariate Analysis", "§15"),
+    ("5 Final Scorecard", "§17"),
+    ("   5.1 Final Scorecard Variables", "§17"),
+    ("   5.2 Correlation among Final Variables", "§17"),
+    ("   5.3 Multicollinearity in Final Variables", "§17"),
+    ("6 Model Performance", "§19-§22"),
+    ("   6.1 Model Discrimination", "§19"),
+    ("   6.2 Variable Stability", "§22"),
+    ("   6.3 Score Stability Distribution", "§22"),
+    ("   6.4 Benchmarking against current scorecard", "§20"),
+    ("7 Model Strengths and Weaknesses", "§32"),
+    ("8 Post Development", "§21-§22"),
+    ("   8.1 Model Monitoring and Tracking Framework", "§21"),
+    ("   8.2 Proposed Tracking metrics", "§22"),
+    ("9 Conservatism", "§29"),
+    ("10 Implementation", "§23-§28 (as-built core)"),
+    ("11 References", "§37"),
+    ("Appendix A: Segmentation results", "§16"),
+    ("Appendix B: Variable Stability", "§22"),
+    ("Appendix C: Definition of Default", "§11"),
+    ("Appendix D: Development Code", "§26"),
 ]
 
 
@@ -313,17 +441,29 @@ def _fact_changelog(b: ContextBundle) -> str:
     return _md_table(["version", "note"], [[b.model_version, "initial implementation"]])
 
 
+def _fact_references(b: ContextBundle) -> str:
+    rows = [[k, v] for k, v in b.input_digests().items()]
+    return (
+        "Source-artefact digests:\n\n"
+        + _md_table(["artefact", "digest"], rows)
+        + "\nRelated: ADR-0001 (data movement), ADR-0009 (signing), ADR-0010 "
+        "(package contract), ADR-0012 (this generator). Development document is "
+        "the as-designed counterpart to this as-built record.\n"
+    )
+
+
 FACT_RENDERERS: dict[str, Callable[[ContextBundle], str]] = {
-    "executive-summary": _fact_exec,
+    "exec-summary": _fact_exec,
     "model-identification": _fact_model_id,
-    "inputs-lineage": _fact_inputs,
-    "outputs": _fact_outputs,
+    "variables": _fact_inputs,
+    "scorecard": _fact_outputs,
     "data-quality": _fact_dq,
     "environment": _fact_environment,
     "code-inventory": _fact_code_inventory,
-    "pipeline-impl": _fact_pipeline,
+    "pipeline": _fact_pipeline,
     "chain-of-custody": _fact_chain,
     "change-log": _fact_changelog,
+    "references": _fact_references,
 }
 
 
@@ -359,7 +499,7 @@ def _render_appendices(bundle: ContextBundle) -> list[str]:
     rows = [[k, v] for k, v in bundle.input_digests().items()]
     lines.append(_md_table(["artefact", "digest"], rows))
 
-    lines.append("## Appendix C — Development document outline")
+    lines.append("## Appendix C — Development document outline (as parsed)")
     lines.append("")
     lines.append(f"Source: {_dev_doc_descriptor(bundle)}.")
     lines.append("")
@@ -379,6 +519,18 @@ def _render_appendices(bundle: ContextBundle) -> list[str]:
             "sections were summarised by heading (the full document remains the "
             "source of record). Increase `--dev-doc-max-chars` to widen the budget."
         )
+    lines.append("")
+
+    lines.append("## Appendix D — Development-document cross-walk")
+    lines.append("")
+    lines.append(
+        "Maps each ABSA Model Development Document section to the implementation-doc "
+        "section that records it as-built — evidence of complete coverage."
+    )
+    lines.append("")
+    lines.append(
+        _md_table(["ABSA dev-doc section", "Implementation doc"], [list(t) for t in DEV_DOC_TOC])
+    )
     lines.append("")
     return lines
 
@@ -420,10 +572,10 @@ def render_document(
     lines.append("")
     lines.append(
         f"> **Status: {status}** · as-built record per "
-        "[ADR-0012](../../../docs/adr/0012-implementation-document-generation.md). "
-        "Platform **facts** are injected verbatim; **narrative** is LLM-drafted and "
-        "requires human review before approval. Section structure is the platform "
-        "default, pending alignment with ABSA's agreed implementation-document outline."
+        "[ADR-0012](../../../docs/adr/0012-implementation-document-generation.md), "
+        "structured as a **section-by-section counterpart to ABSA's Model Development "
+        "Document** (see Appendix D cross-walk). Platform **facts** are injected "
+        "verbatim; **narrative** is LLM-drafted and requires human review before approval."
     )
     lines.append("")
     lines.append("## Provenance")

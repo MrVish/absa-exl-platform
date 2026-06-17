@@ -50,15 +50,18 @@ A structured `implementation.md` (rendered to PDF for sign-off):
    differs from the dev doc, each with justification.
 8. **Change log** — version history (the "living" dimension).
 
-> **As built (2026-06-16):** the generator renders an **exhaustive default of 25
-> narrative sections + 3 appendices** (full file inventory with digests,
-> source-artefact provenance, and the parsed development-document outline) that
-> cover the eight themes above plus intended use, feature engineering, data
-> quality, environment & dependencies, code inventory, monitoring, security,
-> rollback/DR, and open items. The section set is **data-driven**
-> (`SECTION_SPECS` + `FACT_RENDERERS` in `document.py`) and is the **platform
-> default, pending alignment with ABSA's agreed implementation-document
-> structure** — replacing/extending it is a localised edit, not a rewrite.
+> **As built (2026-06-17):** the generator renders an **exhaustive 37-section +
+> 4-appendix** document, **aligned section-by-section to ABSA's Model Development
+> Document TOC** (Overview, Portfolio, Data Landscape & Preparation, Model
+> Development, Final Scorecard, Performance, Strengths/Weaknesses, Post-
+> Development, Conservatism, Implementation, References + appendices). For each
+> dev-doc topic there is an *as-implemented / as-verified / as-hosted*
+> counterpart, plus the platform as-built sections (pipeline, environment, code
+> inventory, security, chain-of-custody). **Appendix D is a dev-doc → impl-doc
+> cross-walk** that proves every dev-doc section is covered — direct SR 11-7 /
+> GMRMG evidence. The section set is **data-driven** (`SECTION_SPECS` +
+> `FACT_RENDERERS` + `DEV_DOC_TOC` in `document.py`): re-aligning to ABSA's final
+> implementation-doc TOC is a localised edit, not a rewrite.
 
 ### How it is generated — facts are grounded, narrative is drafted
 
@@ -187,6 +190,8 @@ is recorded at registration.
    For very large dev docs combined with the exhaustive structure, draft
    section-by-section (each grounded on only its relevant dev-doc sections) to
    improve grounding and stay within model output limits.
-5. **Confirm the implementation-document structure with ABSA.** The 25-section
-   default is exhaustive but provisional; ABSA will supply the agreed outline (as
-   they will for the development document), which then replaces `SECTION_SPECS`.
+5. **Confirm the implementation-document structure with ABSA.** The 37-section
+   structure is now **aligned to ABSA's supplied Model Development Document TOC**
+   (with the Appendix D cross-walk). Remaining: ABSA's sign-off that this
+   as-built TOC is the agreed implementation-doc structure (minor edits land in
+   `SECTION_SPECS` / `DEV_DOC_TOC`).

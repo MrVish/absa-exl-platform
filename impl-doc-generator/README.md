@@ -33,10 +33,11 @@ build_context_bundle → guard_bundle → provider.draft → render_document
   installs + tests with neither SDK nor credentials.
 - **document.py** — renders the markdown (facts verbatim + LLM narrative, clearly
   separated) + a provenance block, and computes the document digest
-  (`implementation_doc_ref`). The **exhaustive 25-section + 3-appendix** structure
-  is data-driven (`SECTION_SPECS` + `FACT_RENDERERS`) and is the platform default,
-  **pending alignment with ABSA's agreed implementation-document outline** —
-  swapping it is a localised edit, not a rewrite.
+  (`implementation_doc_ref`). The **exhaustive 37-section + 4-appendix** structure
+  is **aligned section-by-section to ABSA's Model Development Document TOC**
+  (data-driven via `SECTION_SPECS` + `FACT_RENDERERS` + `DEV_DOC_TOC`); **Appendix
+  D is a dev-doc → impl-doc cross-walk** proving every dev-doc section is covered.
+  Re-aligning to ABSA's final TOC is a localised edit, not a rewrite.
 
 ## CLI
 
@@ -90,12 +91,12 @@ provider. Reproducible with the CLI above (`--generated-at` pins the timestamp).
 ## Status
 
 Generator built and fully tested (offline provider + worked example): exhaustive
-25-section + 3-appendix structure, PDF/DOCX/markdown dev-doc ingestion, and
-section-aware budgeting for ~100-page documents. Cloud LLM adapters are wired but
-gated on the ABSA data-processing agreement (RAID DEP-09).
+**37-section + 4-appendix** structure **aligned to ABSA's Model Development
+Document TOC** (with an Appendix D cross-walk), PDF/DOCX/markdown dev-doc
+ingestion, and section-aware budgeting for ~100-page documents. Cloud LLM
+adapters are wired but gated on the ABSA data-processing agreement (RAID DEP-09).
 
-**Pending alignment / follow-ups (epic E14):** the section structure is the
-platform default until ABSA supplies its agreed implementation-document outline;
-per-section drafting for very large inputs (ADR-0012 open question 4); per-model
-rollout across Group 1/2; and the `implementation_doc_ref` schema wiring into the
-package manifest + registry record.
+**Follow-ups (epic E14):** ABSA sign-off that this as-built TOC is the agreed
+implementation-doc structure; per-section drafting for very large inputs
+(ADR-0012 open question 4); per-model rollout across Group 1/2; and the
+`implementation_doc_ref` schema wiring into the package manifest + registry record.
